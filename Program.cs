@@ -64,7 +64,8 @@ namespace SpotifyPlexSync
                     if (ft != null)
                     {
 
-                        var searchTerm = Regex.Replace(ft.Name, @"\(.*\)", "").Trim();
+                        var searchTerm = Regex.Replace(ft.Name, @"\(.*?\)", "").Trim(); // remove all in brackets
+                        searchTerm = searchTerm.Replace("  ", " "); // remove extra spaces
                         searchTerm = HttpUtility.UrlEncode(searchTerm);
                         var searchResult = await client.GetAsync(config["Plex:Url"] + $"/library/sections/{config["Plex:LibraryKey"]}/all?type=10&title={searchTerm}&X-Plex-Token={config["Plex:Token"]}");
 
