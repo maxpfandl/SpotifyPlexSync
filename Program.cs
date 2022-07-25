@@ -109,7 +109,7 @@ namespace SpotifyPlexSync
                             Console.WriteLine("Track not found on Plex: " + text);
                             if (config["LogUnmatched"].ToLower() == "true")
                             {
-                                File.AppendAllLines($"unmatched_{DateTime.Now.Ticks}.log", new List<string>() { text });
+                                File.AppendAllLines($"unmatched_{DateTime.Now.ToString("yyyy-MM-dd")}.log", new List<string>() { text });
                             }
                             Console.ResetColor();
                         }
