@@ -9,6 +9,7 @@ using Plex.Library.Factories;
 using Plex.ServerApi;
 using System.Xml.Linq;
 using System.Text.RegularExpressions;
+using System.Web;
 
 namespace SpotifyPlexSync
 {
@@ -64,6 +65,7 @@ namespace SpotifyPlexSync
                     {
 
                         var searchTerm = Regex.Replace(ft.Name, @"\(.*\)", "").Trim();
+                        searchTerm = HttpUtility.UrlEncode(searchTerm);
                         var searchResult = await client.GetAsync(config["Plex:Url"] + $"/library/sections/{config["Plex:LibraryKey"]}/all?type=10&title={searchTerm}&X-Plex-Token={config["Plex:Token"]}");
 
                         if (!searchResult.IsSuccessStatusCode)
