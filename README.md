@@ -9,8 +9,7 @@ Needed configuration:
     "Plex": {
         "Url": "your server url",
         "Token": "plextoken: pls google",
-        "ServerId": "obtain from [serverurl]/identity",
-        "LibraryKey": "[serverurl]/library/sections?X-Plex-Token=[mytoken] and check for Directory:Key"
+        "ServerId": "obtain from [serverurl]/identity"
     },
     "Spotify": {
         "ClientID": "spotify client id: you can create an app here https://developer.spotify.com/dashboard/applications",
