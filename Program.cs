@@ -97,7 +97,7 @@ namespace SpotifyPlexSync
                         }
                         if (!found)
                         {
-                            Console.ForegroundColor = ConsoleColor.Yellow;
+                            Console.ForegroundColor = ConsoleColor.Magenta;
                             var text = ft.Artists[0].Name + " - " + ft.Album.Name + " - " + ft.Name + "||" + searchTerm;
                             Console.WriteLine("Track not found on Plex: " + text);
                             if (config["LogUnmatched"].ToLower() == "true")
@@ -168,7 +168,7 @@ namespace SpotifyPlexSync
                     {
                         var ft = tpl.Item2;
                         var key = tpl.Item1;
-                        Console.WriteLine("Adding to Playlist: " + ft.Artists[0].Name + " - " + ft.Album.Name + " - " + ft.Name);
+                        Console.WriteLine("Adding to Playlist (" + title + "): " + ft.Artists[0].Name + " - " + ft.Album.Name + " - " + ft.Name);
                         await client.PutAsync($"{config["Plex:Url"]}{playListLibKey}?uri=server%3A%2F%2F{config["Plex:ServerId"]}%2Fcom.plexapp.plugins.library%2Flibrary%2Fmetadata%2F{key}&X-Plex-Token={config["Plex:Token"]}", null);
                     }
                 }
