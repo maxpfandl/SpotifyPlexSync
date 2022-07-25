@@ -19,7 +19,8 @@ namespace SpotifyPlexSync
 
 
             var builder = new ConfigurationBuilder()
-             .AddJsonFile($"appsettings.json", true, true);
+             .AddJsonFile($"appsettings.json", true, true)
+             .AddJsonFile($"appsettings.my.json", true, true);
             var config = builder.Build();
 
 
