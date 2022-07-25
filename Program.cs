@@ -1,12 +1,5 @@
-﻿using System;
-using Microsoft.Extensions.Configuration;
+﻿using Microsoft.Extensions.Configuration;
 using SpotifyAPI.Web;
-using System.IO;
-using Microsoft.Extensions.Logging;
-using Plex.ServerApi.Api;
-using Plex.ServerApi.Clients;
-using Plex.Library.Factories;
-using Plex.ServerApi;
 using System.Xml.Linq;
 using System.Text.RegularExpressions;
 using System.Web;
