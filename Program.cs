@@ -185,11 +185,11 @@ namespace SpotifyPlexSync
         }
         private static bool Compare(FullTrack track, string plexTitle, string plexArtist)
         {
-
-            var spTitle = Regex.Replace(track.Name, @"[^0-9a-zA-Z:,]+", "").ToLower();
-            var spArtist = Regex.Replace(track.Artists[0].Name, @"[^0-9a-zA-Z:,]+", "").ToLower();
-            var plexTitleNorm = Regex.Replace(plexTitle, @"[^0-9a-zA-Z:,]+", "").ToLower();
-            var plexArtistNorm = Regex.Replace(plexArtist, @"[^0-9a-zA-Z:,]+", "").ToLower();
+            var pattern = @"[^0-9a-zA-Z:,]+";
+            var spTitle = Regex.Replace(track.Name, pattern, "").ToLower();
+            var spArtist = Regex.Replace(track.Artists[0].Name, pattern, "").ToLower();
+            var plexTitleNorm = Regex.Replace(plexTitle, pattern, "").ToLower();
+            var plexArtistNorm = Regex.Replace(plexArtist, pattern, "").ToLower();
 
             if (spTitle == plexTitleNorm && spArtist == plexArtistNorm)
                 return true;
