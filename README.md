@@ -18,6 +18,7 @@ Needed configuration:
     "Sync": [
         "playlistid|playlistdescription (only used for this json, not used as title)"
     ],
-    "Prefix": "Spotify - (will used as prefix for the synced playlist)"
+    "Prefix": "Spotify - (will used as prefix for the synced playlist)",
+    "LogUnmatched": "true logs unmatched tracks to unmatched[currentticks].log"
 }
 ```

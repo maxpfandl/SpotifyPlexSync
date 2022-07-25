@@ -107,7 +107,10 @@ namespace SpotifyPlexSync
                             Console.ForegroundColor = ConsoleColor.Yellow;
                             var text = ft.Artists[0].Name + " - " + ft.Album.Name + " - " + ft.Name + "||" + searchTerm;
                             Console.WriteLine("Track not found on Plex: " + text);
-                            File.AppendAllLines("unmatched.log", new List<string>() { text });
+                            if (config["LogUnmatched"].ToLower() == "true")
+                            {
+                                File.AppendAllLines($"unmatched_{DateTime.Now.Ticks}.log", new List<string>() { text });
+                            }
                             Console.ResetColor();
                         }
 
