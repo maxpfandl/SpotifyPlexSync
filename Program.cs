@@ -8,6 +8,7 @@ using Plex.ServerApi.Clients;
 using Plex.Library.Factories;
 using Plex.ServerApi;
 using System.Xml.Linq;
+using System.Text.RegularExpressions;
 
 namespace SpotifyPlexSync
 {
@@ -62,22 +63,32 @@ namespace SpotifyPlexSync
                     if (ft != null)
                     {
 
-                        var searchResult = await client.GetAsync(config["Plex:Url"] + $"/library/sections/{config["Plex:LibraryKey"]}/all?type=10&title={ft.Name}&X-Plex-Token={config["Plex:Token"]}");
+                        var searchTerm = Regex.Replace(ft.Name, @"\(.*\)", "").Trim();
+                        var searchResult = await client.GetAsync(config["Plex:Url"] + $"/library/sections/{config["Plex:LibraryKey"]}/all?type=10&title={searchTerm}&X-Plex-Token={config["Plex:Token"]}");
 
-                        XDocument doc = XDocument.Parse(await searchResult.Content.ReadAsStringAsync());
+                        if (!searchResult.IsSuccessStatusCode)
+                        {
+                            Console.WriteLine("Error while searching " + searchTerm + "\n  " + searchResult.ReasonPhrase);
+                        }
+
+                        var result = await searchResult.Content.ReadAsStringAsync();
+
+                        XDocument doc = XDocument.Parse(result);
                         var found = false;
                         foreach (var pl in doc.Descendants("Track"))
                         {
 
                             var key = pl.Attribute("ratingKey")?.Value;
-                            var plextitle = pl.Attribute("title")?.Value;
-                            var artist = pl.Attribute("grandparentTitle")?.Value;
+                            var plexTitle = pl.Attribute("title")?.Value;
+                            var plexArtist = pl.Attribute("grandparentTitle")?.Value;
+                            var plexAlbum = pl.Attribute("parentTitle")?.Value;
 
-                            if (artist!.ToLower().Contains(ft.Artists[0].Name.ToLower()) && ft.Name.ToLower() == plextitle!.ToLower())
+                            if (ft.Artists[0].Name.ToLower().Contains(plexArtist!.ToLower()) && ft.Name.ToLower().Contains(plexTitle!.ToLower())
+                                && !plexTitle.ToLower().Contains("(live)") && !plexAlbum!.ToLower().Contains("(live)"))
                             {
                                 plexIds.Add(new Tuple<string?, FullTrack>(key, ft));
                                 Console.ForegroundColor = ConsoleColor.Green;
-                                Console.WriteLine("Track found on Plex: " + ft.Artists[0].Name + "||" + ft.Album.Name + "||" + ft.Name);
+                                Console.WriteLine("Track found on Plex: \n  Spotify: " + ft.Artists[0].Name + " - " + ft.Album.Name + " - " + ft.Name + "\n  Plex:    " + plexArtist + " - " + plexAlbum + " - " + plexTitle);
                                 Console.ResetColor();
                                 found = true;
                                 break;
@@ -87,8 +98,32 @@ namespace SpotifyPlexSync
                         }
                         if (!found)
                         {
+                            foreach (var pl in doc.Descendants("Track"))
+                            {
+
+                                var key = pl.Attribute("ratingKey")?.Value;
+                                var plexTitle = pl.Attribute("title")?.Value;
+                                var plexArtist = pl.Attribute("grandparentTitle")?.Value;
+                                var plexAlbum = pl.Attribute("parentTitle")?.Value;
+
+                                if (plexArtist!.ToLower().Contains(ft.Artists[0].Name.ToLower()) && plexTitle!.ToLower().Contains(ft.Name.ToLower())
+                                    && !plexTitle.ToLower().Contains("(live)") && !plexAlbum!.ToLower().Contains("(live)"))
+                                {
+                                    plexIds.Add(new Tuple<string?, FullTrack>(key, ft));
+                                    Console.ForegroundColor = ConsoleColor.Green;
+                                    Console.WriteLine("Track found on Plex: \n  Spotify: " + ft.Artists[0].Name + " - " + ft.Album.Name + " - " + ft.Name + "\n  Plex:    " + plexArtist + " - " + plexAlbum + " - " + plexTitle);
+                                    Console.ResetColor();
+                                    found = true;
+                                    break;
+                                }
+
+
+                            }
+                        }
+                        if (!found)
+                        {
                             Console.ForegroundColor = ConsoleColor.Yellow;
-                            Console.WriteLine("Track not found on Plex: " + ft.Artists[0].Name + "||" + ft.Album.Name + "||" + ft.Name);
+                            Console.WriteLine("Track not found on Plex: " + ft.Artists[0].Name + " - " + ft.Album.Name + " - " + ft.Name);
                             Console.ResetColor();
                         }
 
@@ -153,7 +188,7 @@ namespace SpotifyPlexSync
                     {
                         var ft = tpl.Item2;
                         var key = tpl.Item1;
-                        Console.WriteLine("Adding to Playlist: " + ft.Artists[0].Name + "||" + ft.Album.Name + "||" + ft.Name);
+                        Console.WriteLine("Adding to Playlist: " + ft.Artists[0].Name + " - " + ft.Album.Name + " - " + ft.Name);
                         await client.PutAsync($"{config["Plex:Url"]}{playListLibKey}?uri=server%3A%2F%2F{config["Plex:ServerId"]}%2Fcom.plexapp.plugins.library%2Flibrary%2Fmetadata%2F{key}&X-Plex-Token={config["Plex:Token"]}", null);
                     }
                 }
