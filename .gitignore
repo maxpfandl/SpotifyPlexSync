@@ -455,3 +455,5 @@ $RECYCLE.BIN/
 
 appsettings.my.json
 publish.cmd
+build.cmd
+/build/

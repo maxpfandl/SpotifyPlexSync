@@ -5,6 +5,18 @@
     <TargetFramework>net6.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
+
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Flavor)'=='publish'">
+    <DebugType>full</DebugType>
+    <Optimize>no</Optimize>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Flavor)'=='build'">
+    <PublishSingleFile>true</PublishSingleFile>
+    <SelfContained>true</SelfContained>
+    <PublishTrimmed>true</PublishTrimmed>
   </PropertyGroup>
 
   <ItemGroup>
@@ -22,6 +34,10 @@
     <None Update="appsettings.my.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
- </ItemGroup>
+  </ItemGroup>
+
+  <PropertyGroup>
+    <DebugType>None</DebugType>
+  </PropertyGroup>
 
 </Project>
