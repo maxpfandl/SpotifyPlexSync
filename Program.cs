@@ -3,11 +3,15 @@ using SpotifyAPI.Web;
 using System.Xml.Linq;
 using System.Text.RegularExpressions;
 using System.Web;
+using Microsoft.Extensions.Logging;
 
 namespace SpotifyPlexSync
 {
     internal class Program
     {
+        private static ILogger? _logger;
+
+
         static async Task Main(string[] args)
         {
 
@@ -18,9 +22,24 @@ namespace SpotifyPlexSync
              .AddJsonFile($"appsettings.my.json", true, true);
             var config = builder.Build();
 
+            using var loggerFactory = LoggerFactory.Create(builder =>
+            {
+                builder
+                    .AddConfiguration(config)
+                    .AddConsole()
+                    .AddFile("app_{0:yyyy}-{0:MM}-{0:dd}.log", fileLoggerOpts =>
+                    {
+                        fileLoggerOpts.FormatLogFileName = fName =>
+                        {
+                            return String.Format(fName, DateTime.UtcNow);
+                        };
+                    });
+            });
+
+            _logger = loggerFactory.CreateLogger<Program>();
+
 
             var spotifyConfig = SpotifyClientConfig.CreateDefault();
-
             var request = new ClientCredentialsRequest(config["Spotify:ClientID"], config["Spotify:ClientSecret"]);
             var response = await new OAuthClient(spotifyConfig).RequestToken(request);
 
@@ -34,7 +53,7 @@ namespace SpotifyPlexSync
                 var id = playlist.Split('|')[0];
                 var spotifyPlaylist = await spotify.Playlists.Get(id);
 
-                Console.WriteLine("Working on Spotifyplaylist: " + spotifyPlaylist.Name);
+                _logger.LogInformation("Working on Spotifyplaylist: " + spotifyPlaylist.Name);
                 await AdaptPlexPlaylist(spotifyPlaylist, config);
             }
 
@@ -48,7 +67,8 @@ namespace SpotifyPlexSync
             string title = config["Prefix"] + spotifyPl.Name;
             using (HttpClient client = new HttpClient())
             {
-
+                int? tracks = spotifyPl.Tracks?.Items?.Count;
+                int foundTracks = 0;
                 List<Tuple<string?, FullTrack>> plexIds = new List<Tuple<string?, FullTrack>>();
 
                 foreach (var track in spotifyPl.Tracks?.Items!)
@@ -63,7 +83,7 @@ namespace SpotifyPlexSync
 
                         if (!searchResult.IsSuccessStatusCode)
                         {
-                            Console.WriteLine("Error while searching " + searchTerm + "\n  " + searchResult.ReasonPhrase);
+                            _logger?.LogInformation("Error while searching " + searchTerm + "\n  " + searchResult.ReasonPhrase);
                         }
 
                         var result = await searchResult.Content.ReadAsStringAsync();
@@ -85,9 +105,7 @@ namespace SpotifyPlexSync
                                 if (Compare(ft, plexTitle!, plexArtist!))
                                 {
                                     plexIds.Add(new Tuple<string?, FullTrack>(key, ft));
-                                    Console.ForegroundColor = ConsoleColor.Green;
-                                    Console.WriteLine("Track found on Plex: \n  Spotify: " + ft.Artists[0].Name + " - " + ft.Album.Name + " - " + ft.Name + "\n  Plex:    " + plexArtist + " - " + plexAlbum + " - " + plexTitle);
-                                    Console.ResetColor();
+                                    _logger?.LogInformation("Track found on Plex: \n  Spotify: " + ft.Artists[0].Name + " - " + ft.Album.Name + " - " + ft.Name + "\n  Plex:    " + plexArtist + " - " + plexAlbum + " - " + plexTitle);
                                     found = true;
                                     break;
                                 }
@@ -97,25 +115,28 @@ namespace SpotifyPlexSync
                         }
                         if (!found)
                         {
-                            Console.ForegroundColor = ConsoleColor.Magenta;
+
                             var text = ft.Artists[0].Name + " - " + ft.Album.Name + " - " + ft.Name + "||" + searchTerm;
-                            Console.WriteLine("Track not found on Plex: " + text);
+                            _logger?.LogWarning("Track not found on Plex: " + text);
                             if (config["LogUnmatched"].ToLower() == "true")
                             {
                                 File.AppendAllLines($"unmatched_{DateTime.Now.ToString("yyyy-MM-dd")}.log", new List<string>() { text });
                             }
-                            Console.ResetColor();
+                        }
+                        else
+                        {
+                            foundTracks++;
                         }
 
                     }
 
                 }
-
+                _logger?.LogInformation($"Playlist: {title} - found {foundTracks}/{tracks}");
                 if (plexIds.Count > 0)
                 {
                     string? playListLibKey = "";
                     string? playListKeyKey = "";
-                    Console.WriteLine("Search for Playlist in Plex" + title);
+                    _logger?.LogInformation("Search for Playlist in Plex" + title);
                     var plexList = await client.GetAsync($"{config["Plex:Url"]}/playlists?title={title}&X-Plex-Token={config["Plex:Token"]}");
 
                     XDocument doc = XDocument.Parse(await plexList.Content.ReadAsStringAsync());
@@ -123,7 +144,7 @@ namespace SpotifyPlexSync
                     // clear playlist
                     if (doc.Descendants("Playlist").Count() == 1)
                     {
-                        Console.WriteLine("Found Playlist: clearing Items");
+                        _logger?.LogInformation("Found Playlist: clearing Items");
                         foreach (var pl in doc.Descendants("Playlist"))
                         {
                             playListLibKey = pl.Attribute("key")?.Value;
@@ -133,7 +154,7 @@ namespace SpotifyPlexSync
                     }
                     else if (doc.Descendants("Playlist").Count() == 0)
                     {
-                        Console.WriteLine("Playlist not found: creating");
+                        _logger?.LogInformation("Playlist not found: creating");
                         var result = await client.PostAsync($"{config["Plex:Url"]}/playlists?uri=server%3A%2F%{config["Plex:ServerId"]}%2Fcom.plexapp.plugins.library%2Flibrary%2Fmetadata%2F1109%2C1200&includeExternalMedia=1&title={title}&smart=0&type=audio&X-Plex-Token={config["Plex:Token"]}", null);
 
                         doc = XDocument.Parse(await result.Content.ReadAsStringAsync());
@@ -146,14 +167,12 @@ namespace SpotifyPlexSync
                     }
                     else
                     {
-                        Console.ForegroundColor = ConsoleColor.Red;
-                        Console.WriteLine("PlaylistTitle ambiguous: " + title);
-                        Console.ResetColor();
+                        _logger?.LogError("PlaylistTitle ambiguous: " + title);
                     }
 
 
 
-                    Console.WriteLine("PlaylistID in Plex: " + playListLibKey);
+                    _logger?.LogInformation("PlaylistID in Plex: " + playListLibKey);
 
                     //update description and poster
                     if (spotifyPl?.Images?.Count > 0)
@@ -168,15 +187,13 @@ namespace SpotifyPlexSync
                     {
                         var ft = tpl.Item2;
                         var key = tpl.Item1;
-                        Console.WriteLine("Adding to Playlist (" + title + "): " + ft.Artists[0].Name + " - " + ft.Album.Name + " - " + ft.Name);
+                        _logger?.LogInformation("Adding to Playlist (" + title + "): " + ft.Artists[0].Name + " - " + ft.Album.Name + " - " + ft.Name);
                         await client.PutAsync($"{config["Plex:Url"]}{playListLibKey}?uri=server%3A%2F%2F{config["Plex:ServerId"]}%2Fcom.plexapp.plugins.library%2Flibrary%2Fmetadata%2F{key}&X-Plex-Token={config["Plex:Token"]}", null);
                     }
                 }
                 else
                 {
-                    Console.ForegroundColor = ConsoleColor.Red;
-                    Console.WriteLine("No Titles found in Plex for Playlist " + title);
-                    Console.ResetColor();
+                    _logger?.LogError("No Titles found in Plex for Playlist " + title);
                 }
 
 
