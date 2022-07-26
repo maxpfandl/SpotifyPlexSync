@@ -38,6 +38,7 @@ namespace SpotifyPlexSync
             });
 
             _logger = loggerFactory.CreateLogger<Program>();
+            List<string> reports = new List<string>();
 
             try
             {
@@ -46,19 +47,40 @@ namespace SpotifyPlexSync
                 var response = await new OAuthClient(spotifyConfig).RequestToken(request);
                 var spotify = new SpotifyClient(spotifyConfig.WithToken(response.AccessToken));
                 var playlists = _config?.GetSection("Sync").Get<List<string>>();
-                foreach (var playlist in playlists!)
+
+
+                // single list
+                if (!String.IsNullOrEmpty(args[0]))
                 {
                     try
                     {
-                        var id = playlist.Split('|')[0];
-                        var spotifyPlaylist = await spotify.Playlists.Get(id);
+                        var spotifyPlaylist = await spotify.Playlists.Get(args[0]);
 
                         _logger.LogInformation("Working on Spotifyplaylist: " + spotifyPlaylist.Name);
-                        await CreateOrUpdatePlexPlayList(spotifyPlaylist);
+                        reports.Add(await CreateOrUpdatePlexPlayList(spotifyPlaylist));
                     }
                     catch (Exception ex)
                     {
                         _logger.LogError("CreateUpdate Playlist in Plex failed", ex);
+                    }
+                }
+                else
+                {
+                    foreach (var playlist in playlists!)
+                    {
+                        try
+                        {
+                            var id = playlist.Split('|')[0];
+                            var spotifyPlaylist = await spotify.Playlists.Get(id);
+
+                            _logger.LogInformation("Working on Spotifyplaylist: " + spotifyPlaylist.Name);
+
+                            reports.Add(await CreateOrUpdatePlexPlayList(spotifyPlaylist));
+                        }
+                        catch (Exception ex)
+                        {
+                            _logger.LogError("CreateUpdate Playlist in Plex failed", ex);
+                        }
                     }
                 }
             }
@@ -67,10 +89,16 @@ namespace SpotifyPlexSync
                 _logger.LogError("Getting Playlists from Spotify failed", ex);
             }
 
+            foreach (var report in reports)
+            {
+                _logger.LogInformation(report);
+            }
+
         }
 
-        private static async Task CreateOrUpdatePlexPlayList(FullPlaylist spotifyPl)
+        private static async Task<string> CreateOrUpdatePlexPlayList(FullPlaylist spotifyPl)
         {
+            string report = "";
             string title = _config?["Prefix"] + spotifyPl.Name;
             using (HttpClient client = new HttpClient())
             {
@@ -82,7 +110,8 @@ namespace SpotifyPlexSync
                 {
                     plexIds.AddRange(await SearchSpotifyTracksInPlex(client, (FullTrack)track.Track));
                 }
-                _logger?.LogInformation($"Playlist: {title} - found {plexIds.Count}/{tracks}");
+                report = $"Playlist: {title} - found {plexIds.Count}/{tracks}";
+                _logger?.LogInformation(report);
 
 
                 if (plexIds.Count > 0)
@@ -90,7 +119,7 @@ namespace SpotifyPlexSync
                     Tuple<string?, string?>? playListKeys = await GetOrCreatePlaylist(title, client);
 
                     if (playListKeys == null)
-                        return;
+                        return report;
 
 
                     _logger?.LogInformation("PlaylistID in Plex: " + playListKeys.Item2);
@@ -117,7 +146,7 @@ namespace SpotifyPlexSync
                     _logger?.LogError("No Titles found in Plex for Playlist " + title);
                 }
 
-
+                return report;
             }
 
         }
