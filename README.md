@@ -2,6 +2,8 @@
 
 Simple tool to sync some Spotify playlists to your Plex server.
 
+Since Plex is only able to show Playlists by CreationDate, not ChangeDate, every change is resulting in deletion and recreation of the existing playlist. If the playlist is the same, no update will happen.
+
 Needed configuration:
 
 ```json
