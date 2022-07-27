@@ -122,8 +122,11 @@ namespace SpotifyPlexSync
                         await client.PutAsync($"{_config?["Plex:Url"]}/playlists/{playList.PlexId}?summary={playList.Description}&X-Plex-Token={_config?["Plex:Token"]}", null);
                         foreach (var track in playList.Tracks)
                         {
-                            _logger?.LogInformation("Adding to Playlist (" + playList.Name + "): " + track.SpTrack?.Artists[0].Name + " - " + track.SpTrack?.Album.Name + " - " + track.SpTrack?.Name);
-                            await client.PutAsync($"{_config?["Plex:Url"]}/playlists/{playList.PlexId}/items?uri=server%3A%2F%2F{_config?["Plex:ServerId"]}%2Fcom.plexapp.plugins.library%2Flibrary%2Fmetadata%2F{track.PTrackKey}&X-Plex-Token={_config?["Plex:Token"]}", null);
+                            if (track.PTrackKey != null)
+                            {
+                                _logger?.LogInformation("Adding to Playlist (" + playList.Name + "): " + track.SpTrack?.Artists[0].Name + " - " + track.SpTrack?.Album.Name + " - " + track.SpTrack?.Name);
+                                await client.PutAsync($"{_config?["Plex:Url"]}/playlists/{playList.PlexId}/items?uri=server%3A%2F%2F{_config?["Plex:ServerId"]}%2Fcom.plexapp.plugins.library%2Flibrary%2Fmetadata%2F{track.PTrackKey}&X-Plex-Token={_config?["Plex:Token"]}", null);
+                            }
                         }
                         report += " - new";
                     }
@@ -134,65 +137,36 @@ namespace SpotifyPlexSync
                     {
                         var existingTracks = await client.GetAsync($"{_config?["Plex:Url"]}/playlists/{playList.PlexId}/items?X-Plex-Token={_config?["Plex:Token"]}");
 
-                        List<Tuple<string, string>> existingKeys = new List<Tuple<string, string>>();
+                        List<string> existingKeys = new List<string>();
 
                         XDocument doc = XDocument.Parse(await existingTracks.Content.ReadAsStringAsync());
 
                         foreach (var pl in doc.Descendants("Track"))
                         {
                             var key = pl.Attribute("ratingKey")?.Value;
-                            var playlistKey = pl.Attribute("playlistItemID")?.Value;
-
-                            existingKeys.Add(new Tuple<string, string>(key!, playlistKey!));
+                            if (key != null)
+                                existingKeys.Add(key);
 
                         }
 
-                        List<string> toDelete = new List<string>();
-                        List<string> toAdd = new List<string>();
 
-                        foreach (var item in playList.Tracks)
+                        bool recreate = false;
+
+                        foreach (var newItem in playList.Tracks)
                         {
-                            bool found = false;
-                            foreach (var exist in existingKeys)
-                            {
-                                if (exist.Item1 == item.PTrackKey)
-                                {
-                                    found = true;
-                                    continue;
-                                }
-                            }
-                            if (!found)
-                            {
-                                if (item.PTrackKey != null)
-                                {
-                                    toAdd.Add(item.PTrackKey);
-                                    _logger?.LogInformation("Adding to Playlist (" + playList.Name + "): " + item.SpTrack?.Artists[0].Name + " - " + item.SpTrack?.Album.Name + " - " + item.SpTrack?.Name);
-                                }
-                            }
-
-
+                            var existingItem = existingKeys.Find(p => p == newItem.PTrackKey);
+                            if (existingItem == null)
+                                recreate = true;
                         }
 
-                        foreach (var exist in existingKeys)
+                        foreach (var key in existingKeys)
                         {
-                            bool found = false;
-                            foreach (var item in playList.Tracks)
-                            {
-                                if (exist.Item1 == item.PTrackKey)
-                                {
-                                    found = true;
-                                    continue;
-                                }
-                            }
-                            if (!found)
-                            {
-                                toDelete.Add(exist.Item2);
-                                _logger?.LogInformation("Removing from Playlist (" + playList.Name + "): " + exist.Item1);
-                            }
+                            var deleteItem = playList.Tracks.Find(p => p.PTrackKey == key);
+                            if (deleteItem != null)
+                                recreate = true;
                         }
 
-
-                        if (toAdd.Count > 0 || toDelete.Count > 0)
+                        if (recreate)
                         {
                             // delete current playlist and recreate to show up as new
                             await client.DeleteAsync($"{_config?["Plex:Url"]}/playlists/{playList.PlexId}?X-Plex-Token={_config?["Plex:Token"]}");
@@ -204,18 +178,16 @@ namespace SpotifyPlexSync
                             await client.PostAsync($"{_config?["Plex:Url"]}/library/metadata/{playList.PlexId}/posters?url={poster}&X-Plex-Token={_config?["Plex:Token"]}", null);
 
                             await client.PutAsync($"{_config?["Plex:Url"]}/playlists/{playList.PlexId}?summary={playList.Description}&X-Plex-Token={_config?["Plex:Token"]}", null);
-
+                            foreach (var track in playList.Tracks)
+                            {
+                                if (track.PTrackKey != null)
+                                {
+                                    _logger?.LogInformation("Adding to Playlist (" + playList.Name + "): " + track.SpTrack?.Artists[0].Name + " - " + track.SpTrack?.Album.Name + " - " + track.SpTrack?.Name);
+                                    await client.PutAsync($"{_config?["Plex:Url"]}/playlists/{playList.PlexId}/items?uri=server%3A%2F%2F{_config?["Plex:ServerId"]}%2Fcom.plexapp.plugins.library%2Flibrary%2Fmetadata%2F{track.PTrackKey}&X-Plex-Token={_config?["Plex:Token"]}", null);
+                                }
+                            }
                             report += " - recreated";
 
-                            foreach (var del in toDelete)
-                            {
-                                await client.DeleteAsync($"{_config?["Plex:Url"]}/playlists/{playList.PlexId}/items/{del}?X-Plex-Token={_config?["Plex:Token"]}");
-                            }
-
-                            foreach (var add in toAdd)
-                            {
-                                await client.PutAsync($"{_config?["Plex:Url"]}/playlists/{playList.PlexId}/items?uri=server%3A%2F%2F{_config?["Plex:ServerId"]}%2Fcom.plexapp.plugins.library%2Flibrary%2Fmetadata%2F{add}&X-Plex-Token={_config?["Plex:Token"]}", null);
-                            }
 
                         }
                         else
