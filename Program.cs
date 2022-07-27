@@ -50,7 +50,7 @@ namespace SpotifyPlexSync
 
 
                 // single list
-                if (!String.IsNullOrEmpty(args[0]))
+                if (args != null && args.Length == 1 && !String.IsNullOrEmpty(args[0]))
                 {
                     try
                     {
