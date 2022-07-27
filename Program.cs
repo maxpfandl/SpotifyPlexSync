@@ -98,51 +98,124 @@ namespace SpotifyPlexSync
         private static async Task<string> CreateOrUpdatePlexPlayList(FullPlaylist spotifyPl)
         {
             string report = "";
-            string title = _config?["Prefix"] + spotifyPl.Name;
+
+            SyncPlaylist playList = new SyncPlaylist(_config!, _logger!);
+
+
+
+
             using (HttpClient client = new HttpClient())
             {
 
-                int? tracks = spotifyPl.Tracks?.Items?.Count;
-                List<Tuple<string?, FullTrack>> plexIds = new List<Tuple<string?, FullTrack>>();
+                await playList.Initialize(spotifyPl, client);
 
-                foreach (var track in spotifyPl.Tracks?.Items!)
-                {
-                    plexIds.AddRange(await SearchSpotifyTracksInPlex(client, (FullTrack)track.Track));
-                }
-                report = $"Playlist: {title} - found {plexIds.Count}/{tracks}";
+                report = playList.GetReport();
                 _logger?.LogInformation(report);
 
 
-                if (plexIds.Count > 0)
+                if (playList.HasFoundTracks)
                 {
-                    Tuple<string?, string?>? playListKeys = await GetOrCreatePlaylist(title, client);
+                    Tuple<string?, string?>? playListKeys = await GetOrCreatePlaylist(playList.Name!, client);
 
                     if (playListKeys == null)
                         return report;
 
+                    playList.PlexId = playListKeys?.Item1;
 
-                    _logger?.LogInformation("PlaylistID in Plex: " + playListKeys.Item2);
+                    _logger?.LogInformation("PlaylistID in Plex: " + playList.PlexId);
 
-                    //update description and poster
-                    if (spotifyPl?.Images?.Count > 0)
+
+
+
+                    var existingPL = await client.GetAsync($"{_config?["Plex:Url"]}/playlists/{playList.PlexId}/items?X-Plex-Token={_config?["Plex:Token"]}");
+                    List<Tuple<string, string>> existingKeys = new List<Tuple<string, string>>();
+
+                    XDocument doc = XDocument.Parse(await existingPL.Content.ReadAsStringAsync());
+
+                    foreach (var pl in doc.Descendants("Track"))
                     {
-                        var poster = spotifyPl.Images[0].Url;
-                        await client.PostAsync($"{_config?["Plex:Url"]}/library/metadata/{playListKeys.Item1}/posters?url={poster}&X-Plex-Token={_config?["Plex:Token"]}", null);
+                        var key = pl.Attribute("ratingKey")?.Value;
+                        var playlistKey = pl.Attribute("playlistItemID")?.Value;
+
+                        existingKeys.Add(new Tuple<string, string>(key!, playlistKey!));
+
                     }
 
-                    await client.PutAsync($"{_config?["Plex:Url"]}/playlists/{playListKeys.Item1}?summary={spotifyPl?.Description}&X-Plex-Token={_config?["Plex:Token"]}", null);
+                    List<string> toDelete = new List<string>();
+                    List<string> toAdd = new List<string>();
 
-                    foreach (var tpl in plexIds)
+                    foreach (var item in playList.Tracks)
                     {
-                        var ft = tpl.Item2;
-                        var key = tpl.Item1;
-                        _logger?.LogInformation("Adding to Playlist (" + title + "): " + ft.Artists[0].Name + " - " + ft.Album.Name + " - " + ft.Name);
-                        await client.PutAsync($"{_config?["Plex:Url"]}{playListKeys.Item2}?uri=server%3A%2F%2F{_config?["Plex:ServerId"]}%2Fcom.plexapp.plugins.library%2Flibrary%2Fmetadata%2F{key}&X-Plex-Token={_config?["Plex:Token"]}", null);
+                        bool found = false;
+                        foreach (var exist in existingKeys)
+                        {
+                            if (exist.Item1 == item.PTrackKey)
+                            {
+                                found = true;
+                                continue;
+                            }
+                        }
+                        if (!found)
+                        {
+                            if (item.PTrackKey != null)
+                            {
+                                toAdd.Add(item.PTrackKey);
+                                _logger?.LogInformation("Adding to Playlist (" + playList.Name + "): " + item.SpTrack?.Artists[0].Name + " - " + item.SpTrack?.Album.Name + " - " + item.SpTrack?.Name);
+                            }
+                        }
+
+
                     }
+
+                    foreach (var exist in existingKeys)
+                    {
+                        bool found = false;
+                        foreach (var item in playList.Tracks)
+                        {
+                            if (exist.Item1 == item.PTrackKey)
+                            {
+                                found = true;
+                                continue;
+                            }
+                        }
+                        if (!found)
+                        {
+                            toDelete.Add(exist.Item2);
+                            _logger?.LogInformation("Removing from Playlist (" + playList.Name + "): " + exist.Item1);
+                        }
+                    }
+
+                    foreach (var del in toDelete)
+                    {
+                        await client.DeleteAsync($"{_config?["Plex:Url"]}/playlists/{playList.PlexId}/items/{del}?X-Plex-Token={_config?["Plex:Token"]}")
+                    }
+
+                    foreach (var add in toAdd)
+                    {
+                        await client.PutAsync($"{_config?["Plex:Url"]}/playlist/{playList.PlexId}/items?uri=server%3A%2F%2F{_config?["Plex:ServerId"]}%2Fcom.plexapp.plugins.library%2Flibrary%2Fmetadata%2F{add}&X-Plex-Token={_config?["Plex:Token"]}", null);
+                    }
+
+                    if (toAdd.Count > 0 || toDelete.Count > 0)
+                    {
+                        //update description and poster only for updated playlists
+                        var poster = playList.PosterUrl;
+                        await client.PostAsync($"{_config?["Plex:Url"]}/library/metadata/{playList.PlexId}/posters?url={poster}&X-Plex-Token={_config?["Plex:Token"]}", null);
+
+                        await client.PutAsync($"{_config?["Plex:Url"]}/playlists/{playList.PlexId}?summary={playList.Description}&X-Plex-Token={_config?["Plex:Token"]}", null);
+
+                    }
+
+                    // foreach (var tpl in plexIds)
+                    // {
+                    //     var ft = tpl.Item2;
+                    //     var key = tpl.Item1;
+                    //     _logger?.LogInformation("Adding to Playlist (" + title + "): " + ft.Artists[0].Name + " - " + ft.Album.Name + " - " + ft.Name);
+                    //     await client.PutAsync($"{_config?["Plex:Url"]}{playListKeys.Item2}?uri=server%3A%2F%2F{_config?["Plex:ServerId"]}%2Fcom.plexapp.plugins.library%2Flibrary%2Fmetadata%2F{key}&X-Plex-Token={_config?["Plex:Token"]}", null);
+                    // }
                 }
                 else
                 {
-                    _logger?.LogError("No Titles found in Plex for Playlist " + title);
+                    _logger?.LogError("No Titles found in Plex for Playlist " + playList.Name);
                 }
 
                 return report;
@@ -166,7 +239,7 @@ namespace SpotifyPlexSync
                 foreach (var pl in doc.Descendants("Playlist"))
                 {
                     playListResult = new Tuple<string?, string?>(pl.Attribute("ratingKey")?.Value, pl.Attribute("key")?.Value);
-                    await client.DeleteAsync($"{_config?["Plex:Url"]}{playListResult.Item2}?X-Plex-Token={_config?["Plex:Token"]}");
+                    // await client.DeleteAsync($"{_config?["Plex:Url"]}{playListResult.Item2}?X-Plex-Token={_config?["Plex:Token"]}");
                 }
             }
             else if (doc.Descendants("Playlist").Count() == 0)
@@ -188,81 +261,7 @@ namespace SpotifyPlexSync
             return playListResult;
         }
 
-        private static async Task<List<Tuple<string?, FullTrack>>> SearchSpotifyTracksInPlex(HttpClient client, FullTrack spotifyTrack)
-        {
-            var resultList = new List<Tuple<string?, FullTrack>>();
-            var ft = spotifyTrack;
-            if (ft != null)
-            {
-
-                var searchTerm = Regex.Replace(ft.Name, @"\(.*?\)", "").Trim(); // remove all in brackets
-                searchTerm = HttpUtility.UrlEncode(searchTerm);
-                var searchResult = await client.GetAsync(_config?["Plex:Url"] + $"/hubs/search?query={searchTerm}&limit=100&X-Plex-Token={_config?["Plex:Token"]}");
-
-                if (!searchResult.IsSuccessStatusCode)
-                {
-                    _logger?.LogInformation("Error while searching " + searchTerm + "\n  " + searchResult.ReasonPhrase);
-                }
-
-                var result = await searchResult.Content.ReadAsStringAsync();
-
-                XDocument doc = XDocument.Parse(result);
-                var found = false;
-                foreach (var hub in doc.Descendants("Hub"))
-                {
-                    if (hub.Attribute("type")?.Value != "track")
-                        continue;
-                    foreach (var pl in hub.Descendants("Track"))
-                    {
-                        var key = pl.Attribute("ratingKey")?.Value;
-                        var plexTitle = pl.Attribute("title")?.Value;
-                        var plexArtist = pl.Attribute("grandparentTitle")?.Value;
-                        var plexAlbum = pl.Attribute("parentTitle")?.Value;
 
 
-                        if (Compare(ft, plexTitle!, plexArtist!))
-                        {
-                            resultList.Add(new Tuple<string?, FullTrack>(key, ft));
-                            _logger?.LogInformation("Track found on Plex: \n  Spotify: " + ft.Artists[0].Name + " - " + ft.Album.Name + " - " + ft.Name + "\n  Plex:    " + plexArtist + " - " + plexAlbum + " - " + plexTitle);
-                            found = true;
-                            break;
-                        }
-                    }
-
-
-                }
-                if (!found)
-                {
-
-                    var text = ft.Artists[0].Name + " - " + ft.Album.Name + " - " + ft.Name + "||" + searchTerm;
-                    _logger?.LogWarning("Track not found on Plex: " + text);
-                    if (_config?["LogUnmatched"].ToLower() == "true")
-                    {
-                        File.AppendAllLines($"sptfplexsync_unmatched_{DateTime.Now.ToString("yyyy-MM-dd")}.log", new List<string>() { text });
-                    }
-                }
-
-            }
-            return resultList;
-        }
-        private static bool Compare(FullTrack track, string plexTitle, string plexArtist)
-        {
-            var pattern = @"[^0-9a-zA-Z:,]+";
-            var spTitle = Regex.Replace(track.Name, pattern, "").ToLower();
-            var spArtist = Regex.Replace(track.Artists[0].Name, pattern, "").ToLower();
-            var plexTitleNorm = Regex.Replace(plexTitle, pattern, "").ToLower();
-            var plexArtistNorm = Regex.Replace(plexArtist, pattern, "").ToLower();
-
-            if (spTitle == plexTitleNorm && spArtist == plexArtistNorm)
-                return true;
-
-            if (spTitle.Contains(plexTitleNorm) && spArtist.Contains(plexArtistNorm) && !plexTitle.Contains("(live"))
-                return true;
-
-            if (plexTitleNorm.Contains(spTitle) && plexArtistNorm.Contains(spArtist) && !plexTitle.Contains("(live"))
-                return true;
-
-            return false;
-        }
     }
 }
