@@ -89,10 +89,9 @@ namespace SpotifyPlexSync
                 _logger.LogError("Getting Playlists from Spotify failed", ex);
             }
 
-            foreach (var report in reports)
-            {
-                _logger.LogInformation(report);
-            }
+            var message = String.Join(Environment.NewLine, reports);
+
+            _logger.LogInformation(message);
 
         }
 
