@@ -28,7 +28,7 @@ namespace SpotifyPlexSync
                 builder
                     .AddConfiguration(_config)
                     .AddConsole()
-                    .AddFile("app_{0:yyyy}-{0:MM}-{0:dd}.log", fileLoggerOpts =>
+                    .AddFile("sptfplexsync_{0:yyyy}-{0:MM}-{0:dd}.log", fileLoggerOpts =>
                     {
                         fileLoggerOpts.FormatLogFileName = fName =>
                         {
@@ -239,7 +239,7 @@ namespace SpotifyPlexSync
                     _logger?.LogWarning("Track not found on Plex: " + text);
                     if (_config?["LogUnmatched"].ToLower() == "true")
                     {
-                        File.AppendAllLines($"unmatched_{DateTime.Now.ToString("yyyy-MM-dd")}.log", new List<string>() { text });
+                        File.AppendAllLines($"sptfplexsync_unmatched_{DateTime.Now.ToString("yyyy-MM-dd")}.log", new List<string>() { text });
                     }
                 }
 
