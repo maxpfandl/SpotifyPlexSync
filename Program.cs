@@ -112,6 +112,7 @@ namespace SpotifyPlexSync
                 {
                     playList.PlexId = await GetPlaylist(playList.Name!, client);
 
+                    // new playlist
                     if (playList.PlexId == null)
                     {
                         playList.PlexId = await CreatePlayListPlex(playList.Name!, client);
@@ -127,6 +128,8 @@ namespace SpotifyPlexSync
                         report += " - new";
                     }
 
+
+                    // existing playlist
                     else
                     {
                         var existingTracks = await client.GetAsync($"{_config?["Plex:Url"]}/playlists/{playList.PlexId}/items?X-Plex-Token={_config?["Plex:Token"]}");
