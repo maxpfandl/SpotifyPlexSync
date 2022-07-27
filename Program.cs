@@ -259,7 +259,6 @@ namespace SpotifyPlexSync
 
             if (doc.Descendants("Playlist").Count() == 1)
             {
-                _logger?.LogInformation("Found Playlist: clearing Items");
                 foreach (var pl in doc.Descendants("Playlist"))
                 {
                     return pl.Attribute("ratingKey")?.Value;
