@@ -7,10 +7,8 @@ on:
     branches: [ "main" ]
 
 jobs:
-  build:
-
+  publish:
     runs-on: ubuntu-latest
-
     steps:
     - uses: actions/checkout@v3
     - name: Setup .NET
@@ -33,14 +31,14 @@ jobs:
       uses: actions/upload-artifact@v2
       with:
         name: win-x64
-        path: /home/runner/work/SpotifyPlexSync/build/win-x64
+        path: ./build/win-x64
     - name: Upload Build Artifact linux-x64
       uses: actions/upload-artifact@v2
       with:
         name: linux-x64
-        path: /home/runner/work/SpotifyPlexSync/build/linux-x64        
+        path: ./build/linux-x64        
     - name: Upload Build Artifact linux-arm64
       uses: actions/upload-artifact@v2
       with:
         name: linux-arm64
-        path: /home/runner/work/SpotifyPlexSync/build/linux-arm64
+        path: ./build/linux-arm64
