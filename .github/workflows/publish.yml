@@ -1,8 +1,9 @@
 name: .NET
 
-on:
-  release:
-    types: [created]
+on: 
+  push:
+    tags:
+    - 'v*'
 
 jobs:
   publish:
