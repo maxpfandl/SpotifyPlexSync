@@ -31,14 +31,14 @@ jobs:
       uses: actions/upload-artifact@v2
       with:
         name: win-x64
-        path: ./build/win-x64
+        path: ./build/win-x64/
     - name: Upload Build Artifact linux-x64
       uses: actions/upload-artifact@v2
       with:
         name: linux-x64
-        path: ./build/linux-x64        
+        path: ./build/linux-x64/        
     - name: Upload Build Artifact linux-arm64
       uses: actions/upload-artifact@v2
       with:
         name: linux-arm64
-        path: ./build/linux-arm64
+        path: ./build/linux-arm64/
