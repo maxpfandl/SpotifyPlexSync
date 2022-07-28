@@ -2,9 +2,8 @@ name: .NET
 
 on:
   push:
-    branches: [ "main" ]
-  pull_request:
-    branches: [ "main" ]
+    tags:
+    - 'v*' # Push events to matching v*, i.e. v1.0, v20.15.10
 
 jobs:
   publish:
@@ -27,18 +26,33 @@ jobs:
       run: dotnet publish -c Release -r linux-x64 --self-contained -o build/linux-x64 -p:Flavor=build
     - name: Publish linux-arm
       run: dotnet publish -c Release -r linux-arm64 --self-contained -o build/linux-arm64 -p:Flavor=build
-    - name: Upload Build Artifact win-x64
-      uses: actions/upload-artifact@v2
+    - name: Zip win-x64
+    - uses: vimtor/action-zip@v1
       with:
-        name: win-x64
-        path: ./build/win-x64/
-    - name: Upload Build Artifact linux-x64
-      uses: actions/upload-artifact@v2
+        files: build/win-x64/
+        dest: win-x64.zip
+    - name: Zip linux-x64
+    - uses: vimtor/action-zip@v1
       with:
-        name: linux-x64
-        path: ./build/linux-x64/        
-    - name: Upload Build Artifact linux-arm64
-      uses: actions/upload-artifact@v2
+        files: build/linux-x64/
+        dest: linux-x64.zip
+    - name: Zip linux-arm64
+    - uses: vimtor/action-zip@v1
       with:
-        name: linux-arm64
-        path: ./build/linux-arm64/
+        files: build/linux-arm64/
+        dest: linux-arm64.zip                
+    - name: Create Release
+      id: create_release
+      uses: actions/create-release@v1
+      env:
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} # This token is provided by Actions, you do not need to create your own token
+      with:
+        tag_name: ${{ github.ref }}
+        release_name: Release ${{ github.ref }}
+        body: |
+            Changes in this Release
+            - First Change
+            - Second Change
+        draft: true
+        prerelease: false
+        artifacts: "*.zip"
