@@ -1,43 +1,61 @@
-name: .NET
+name: Publish
 
-on: 
-  push:
-    tags:
-    - 'v*'
+on:
+  release:
+    types: [published]
 
 jobs:
-  publish:
-    runs-on: ubuntu-latest
+  release:
+    name: Release
+    strategy:
+      matrix:
+        kind: ['linux', 'windows', 'macOS', 'arm64']
+        include:
+          - kind: linux
+            os: ubuntu-latest
+            target: linux-x64
+          - kind: windows
+            os: windows-latest
+            target: win-x64
+          - kind: macOS
+            os: macos-latest
+            target: osx-x64
+          - kind: arm64
+            os: ubuntu-latest
+            target: linux-arm64
+    runs-on: ${{ matrix.os }}
     steps:
-    - uses: actions/checkout@v3
-    - name: Setup .NET
-      uses: actions/setup-dotnet@v2
-      with:
-        dotnet-version: 6.0.x
-    - name: Restore dependencies
-      run: dotnet restore
-    - name: Build
-      run: dotnet build --no-restore
-    - name: Test
-      run: dotnet test --no-build --verbosity normal
-    - name: Publish win-x64
-      run: dotnet publish -c Release -r win-x64 --self-contained -o build/win-x64 -p:Flavor=build
-    - name: Publish linux-x64
-      run: dotnet publish -c Release -r linux-x64 --self-contained -o build/linux-x64 -p:Flavor=build
-    - name: Publish linux-arm
-      run: dotnet publish -c Release -r linux-arm64 --self-contained -o build/linux-arm64 -p:Flavor=build
-    - name: Upload Build Artifact win-x64
-      uses: actions/upload-artifact@v2
-      with:
-        name: win-x64
-        path: ./build/win-x64/
-    - name: Upload Build Artifact linux-x64
-      uses: actions/upload-artifact@v2
-      with:
-        name: linux-x64
-        path: ./build/linux-x64/        
-    - name: Upload Build Artifact linux-arm64
-      uses: actions/upload-artifact@v2
-      with:
-        name: linux-arm64
-        path: ./build/linux-arm64/
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Setup dotnet
+        uses: actions/setup-dotnet@v2
+        with:
+          dotnet-version: 6.0.x
+
+      - name: Build
+        shell: bash
+        run: |
+          tag=$(git describe --tags --abbrev=0)
+          release_name="App-$tag-${{ matrix.target }}"
+
+          # Build everything
+          dotnet publish -c Release -r "${{ matrix.target }}" --self-contained -o "$release_name" -p:Flavor=build
+
+          # Pack files
+          if [ "${{ matrix.target }}" == "win-x64" ]; then
+            # Pack to zip for Windows
+            7z a -tzip "${release_name}.zip" "./${release_name}/*"
+          else
+          tar czvf "${release_name}.tar.gz" "$release_name"
+          fi
+
+          # Delete output directory
+          rm -r "$release_name"
+
+      - name: Publish
+        uses: softprops/action-gh-release@v1
+        with:
+          files: "App*"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
