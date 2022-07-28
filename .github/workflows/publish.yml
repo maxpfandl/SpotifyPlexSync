@@ -2,7 +2,7 @@ name: .NET
 
 on:
   release:
-    types: [prereleased]
+    types: [created]
 
 jobs:
   publish:
