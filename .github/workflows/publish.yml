@@ -1,0 +1,46 @@
+name: .NET
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v3
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v2
+      with:
+        dotnet-version: 6.0.x
+    - name: Restore dependencies
+      run: dotnet restore
+    - name: Build
+      run: dotnet build --no-restore
+    - name: Test
+      run: dotnet test --no-build --verbosity normal
+    - name: Publish win-x64
+      run: dotnet publish -c Release -r win-x64 --self-contained -o build\win-x64 -p:Flavor=build
+    - name: Publish linux-x64
+      run: dotnet publish -c Release -r linux-x64 --self-contained -o build\linux-x64 -p:Flavor=build
+    - name: Publish linux-arm
+      run: dotnet publish -c Release -r linux-arm64 --self-contained -o build\linux-arm64 -p:Flavor=build
+    - name: Upload Build Artifact win-x64
+      uses: actions/upload-artifact@v2
+      with:
+        name: win-x64
+        path: /home/runner/work/SpotifyPlexSync/build/win-x64
+    - name: Upload Build Artifact linux-x64
+      uses: actions/upload-artifact@v2
+      with:
+        name: linux-x64
+        path: /home/runner/work/SpotifyPlexSync/build/linux-x64        
+    - name: Upload Build Artifact linux-arm64
+      uses: actions/upload-artifact@v2
+      with:
+        name: linux-arm64
+        path: /home/runner/work/SpotifyPlexSync/build/linux-arm64
