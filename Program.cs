@@ -12,6 +12,8 @@ namespace SpotifyPlexSync
         private static ILogger? _logger;
         private static IConfiguration? _config;
 
+        private static SpotifyClient? _spotify;
+
 
         static async Task Main(string[] args)
         {
@@ -43,7 +45,7 @@ namespace SpotifyPlexSync
                 var spotifyConfig = SpotifyClientConfig.CreateDefault();
                 var request = new ClientCredentialsRequest(_config?["Spotify:ClientID"]!, _config?["Spotify:ClientSecret"]!);
                 var response = await new OAuthClient(spotifyConfig).RequestToken(request);
-                var spotify = new SpotifyClient(spotifyConfig.WithToken(response.AccessToken));
+                _spotify = new SpotifyClient(spotifyConfig.WithToken(response.AccessToken));
                 var playlists = _config?.GetSection("Sync").Get<List<string>>();
 
 
@@ -52,8 +54,7 @@ namespace SpotifyPlexSync
                 {
                     try
                     {
-                        var spotifyPlaylist = await spotify.Playlists.Get(args[0]);
-
+                        var spotifyPlaylist = await _spotify.Playlists.Get(args[0]);
                         _logger.LogInformation("Working on Spotifyplaylist: " + spotifyPlaylist.Name);
                         reports.Add(await CreateOrUpdatePlexPlayList(spotifyPlaylist));
                     }
@@ -69,7 +70,7 @@ namespace SpotifyPlexSync
                         try
                         {
                             var id = playlist.Split('|')[0];
-                            var spotifyPlaylist = await spotify.Playlists.Get(id);
+                            var spotifyPlaylist = await _spotify.Playlists.Get(id);
 
                             _logger.LogInformation("Working on Spotifyplaylist: " + spotifyPlaylist.Name);
 
@@ -102,7 +103,7 @@ namespace SpotifyPlexSync
             using (HttpClient client = new HttpClient())
             {
 
-                await playList.Initialize(spotifyPl, client);
+                await playList.Initialize(spotifyPl, client, _spotify!);
 
                 report = playList.GetReport();
                 _logger?.LogInformation(report);
@@ -152,17 +153,20 @@ namespace SpotifyPlexSync
 
                         bool recreate = false;
 
-                        foreach (var newItem in playList.Tracks)
+                        foreach (var fromSpotify in playList.Tracks)
                         {
-                            var existingItem = existingKeys.Find(p => p == newItem.PTrackKey);
-                            if (existingItem == null)
-                                recreate = true;
+                            if (fromSpotify.PTrackKey != null)
+                            {
+                                var existingItem = existingKeys.Find(p => p == fromSpotify.PTrackKey);
+                                if (existingItem == null)
+                                    recreate = true;
+                            }
                         }
 
-                        foreach (var key in existingKeys)
+                        foreach (var existing in existingKeys)
                         {
-                            var deleteItem = playList.Tracks.Find(p => p.PTrackKey == key);
-                            if (deleteItem != null)
+                            var deleteItem = playList.Tracks.Find(p => p.PTrackKey == existing);
+                            if (deleteItem == null)
                                 recreate = true;
                         }
 

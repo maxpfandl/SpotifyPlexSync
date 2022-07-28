@@ -35,20 +35,27 @@ namespace SpotifyPlexSync
             }
         }
 
-        public async Task Initialize(FullPlaylist spPlaylist, HttpClient client)
+        public async Task Initialize(FullPlaylist spPlaylist, HttpClient client, SpotifyClient spotify)
         {
             Name = _config?["Prefix"] + spPlaylist.Name;
             if (spPlaylist.Images?.Count > 0)
                 PosterUrl = spPlaylist.Images?[0].Url;
-                
+
             Description = spPlaylist.Description;
 
-            foreach (var track in spPlaylist.Tracks?.Items!)
+            await foreach (var track in spotify.Paginate(spPlaylist.Tracks!))
             {
                 var ft = track.Track as FullTrack;
                 if (ft != null)
                     Tracks.Add(await SearchSpotifyTracksInPlex(client, ft));
             }
+
+            // foreach (var track in spPlaylist.Tracks?.Items!)
+            // {
+            //     var ft = track.Track as FullTrack;
+            //     if (ft != null)
+            //         Tracks.Add(await SearchSpotifyTracksInPlex(client, ft));
+            // }
         }
 
         public string GetReport()
