@@ -54,9 +54,16 @@ namespace SpotifyPlexSync
                 {
                     try
                     {
-                        var spotifyPlaylist = await _spotify.Playlists.Get(args[0]);
-                        _logger.LogInformation("Working on Spotifyplaylist: " + spotifyPlaylist.Name);
-                        reports.Add(await CreateOrUpdatePlexPlayList(spotifyPlaylist));
+                        if (args[0] == "createjson")
+                        {
+                            PlaylistExtractor.Extract();
+                        }
+                        else
+                        {
+                            var spotifyPlaylist = await _spotify.Playlists.Get(args[0]);
+                            _logger.LogInformation("Working on Spotifyplaylist: " + spotifyPlaylist.Name);
+                            reports.Add(await CreateOrUpdatePlexPlayList(spotifyPlaylist));
+                        }
                     }
                     catch (Exception ex)
                     {
