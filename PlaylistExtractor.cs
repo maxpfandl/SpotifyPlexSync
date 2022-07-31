@@ -3,6 +3,7 @@ using Newtonsoft.Json;
 
 public static class PlaylistExtractor
 {
+    //used to transform the json from your library request as json to import to the settings since the authentication method used does not allow userdata to be read.
     public static void Extract()
     {
         string json = File.ReadAllText(@"D:\Development\SpotifyPlexSync\playlists.json");
