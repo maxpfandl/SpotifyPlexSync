@@ -4,6 +4,7 @@ using System.Xml.Linq;
 using System.Text.RegularExpressions;
 using System.Web;
 using Microsoft.Extensions.Logging;
+using SpotifyAPI.Web.Auth;
 
 namespace SpotifyPlexSync
 {
@@ -14,9 +15,14 @@ namespace SpotifyPlexSync
 
         private static SpotifyClient? _spotify;
 
+        private static EmbedIOAuthServer _server;
+
+        private static string[] _args;
 
         static async Task Main(string[] args)
         {
+
+            _args = args;
 
             var builder = new ConfigurationBuilder()
              .AddJsonFile($"appsettings.json", true, true)
@@ -38,29 +44,66 @@ namespace SpotifyPlexSync
             });
 
             _logger = loggerFactory.CreateLogger<Program>();
+
+
+
+
+            // Make sure "http://localhost:5000/callback" is in your spotify application as redirect uri!
+            _server = new EmbedIOAuthServer(new Uri("http://localhost:5000/callback"), 5000);
+            await _server.Start();
+
+            _server.AuthorizationCodeReceived += OnAuthorizationCodeReceived;
+            _server.ErrorReceived += OnErrorReceived;
+
+            var request = new LoginRequest(_server.BaseUri, _config?["Spotify:ClientID"]!, LoginRequest.ResponseType.Code)
+            {
+                Scope = new List<string> { Scopes.UserReadEmail }
+            };
+            BrowserUtil.Open(request.ToUri());
+
+            Console.ReadKey();
+
+
+        }
+
+        private static async Task OnAuthorizationCodeReceived(object sender, AuthorizationCodeResponse response)
+        {
+            await _server.Stop();
+
+            var config = SpotifyClientConfig.CreateDefault();
+            var tokenResponse = await new OAuthClient(config).RequestToken(
+              new AuthorizationCodeTokenRequest(
+                _config?["Spotify:ClientID"]!, _config?["Spotify:ClientSecret"]!, response.Code, new Uri("http://localhost:5000/callback")
+              )
+            );
+
+            _spotify = new SpotifyClient(tokenResponse.AccessToken);
+            // do calls with Spotify and save token?
+
             List<string> reports = new List<string>();
 
             try
             {
-                var spotifyConfig = SpotifyClientConfig.CreateDefault();
-                var request = new ClientCredentialsRequest(_config?["Spotify:ClientID"]!, _config?["Spotify:ClientSecret"]!);
-                var response = await new OAuthClient(spotifyConfig).RequestToken(request);
-                _spotify = new SpotifyClient(spotifyConfig.WithToken(response.AccessToken));
+
+
                 var playlists = _config?.GetSection("Sync").Get<List<string>>();
 
 
                 // single list
-                if (args != null && args.Length == 1 && !String.IsNullOrEmpty(args[0]))
+                if (_args != null && _args.Length == 1 && !String.IsNullOrEmpty(_args[0]))
                 {
                     try
                     {
-                        if (args[0] == "createjson")
+                        if(_args[0] == "test"){
+                            var user = await _spotify.UserProfile.Current();
+                        }
+                        if (_args[0] == "createjson")
                         {
                             PlaylistExtractor.Extract();
                         }
                         else
                         {
-                            var spotifyPlaylist = await _spotify.Playlists.Get(args[0]);
+                            var spotifyPlaylist = await _spotify.Playlists.Get(_args[0]);
                             _logger.LogInformation("Working on Spotifyplaylist: " + spotifyPlaylist.Name);
                             reports.Add(await CreateOrUpdatePlexPlayList(spotifyPlaylist));
                         }
@@ -98,8 +141,14 @@ namespace SpotifyPlexSync
             var message = String.Join(Environment.NewLine, reports);
 
             _logger.LogInformation(message);
-
         }
+
+        private static async Task OnErrorReceived(object sender, string error, string state)
+        {
+            Console.WriteLine($"Aborting authorization, error received: {error}");
+            await _server.Stop();
+        }
+
 
         private static async Task<string> CreateOrUpdatePlexPlayList(FullPlaylist spotifyPl)
         {
