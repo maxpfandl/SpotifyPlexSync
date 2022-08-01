@@ -45,3 +45,9 @@ Read all your playlists in your library and sync them:
 `SpotifyPlexSync all`
 
 This needs a system with a browser for authentication, so scripting is not possible.
+
+### Extract
+
+Read all your playlists in your library and show the id's and title in the console. Useful for configuration.
+
+This also needs a system with a browser for authentication.
