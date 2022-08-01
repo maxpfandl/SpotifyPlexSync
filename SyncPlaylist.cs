@@ -9,8 +9,15 @@ namespace SpotifyPlexSync
 {
     public class SyncPlaylist
     {
-        private IConfiguration _config;
-        private ILogger _logger;
+        private IConfiguration? _config;
+
+        private static List<SyncPlaylistTrack> _cache = new List<SyncPlaylistTrack>();
+
+        private ILogger? _logger;
+        private SyncPlaylist()
+        {
+            Tracks = new List<SyncPlaylistTrack>();
+        }
         public SyncPlaylist(IConfiguration config, ILogger logger)
         {
             Tracks = new List<SyncPlaylistTrack>();
@@ -80,6 +87,12 @@ namespace SpotifyPlexSync
             if (ft != null)
             {
 
+                foreach (var cache in _cache)
+                {
+                    if (cache.PTrackKey != null && cache?.SpTrack?.Id == ft.Id)
+                       return cache;
+                }
+
                 var searchTerm = Regex.Replace(ft.Name, @"\(.*?\)", "").Trim(); // remove all in brackets
                 searchTerm = HttpUtility.UrlEncode(searchTerm);
                 var searchResult = await client.GetAsync(_config?["Plex:Url"] + $"/hubs/search?query={searchTerm}&limit=100&X-Plex-Token={_config?["Plex:Token"]}");
@@ -108,6 +121,8 @@ namespace SpotifyPlexSync
                         if (Compare(ft, plexTitle!, plexArtist!))
                         {
                             trackresult.PTrackKey = key;
+                            if (!_cache.Contains(trackresult))
+                                _cache.Add(trackresult);
                             _logger?.LogInformation("Track found on Plex: \n  Spotify: " + ft.Artists[0].Name + " - " + ft.Album.Name + " - " + ft.Name + "\n  Plex:    " + plexArtist + " - " + plexAlbum + " - " + plexTitle);
                             found = true;
                             break;
