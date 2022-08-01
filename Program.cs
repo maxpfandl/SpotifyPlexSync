@@ -192,7 +192,8 @@ namespace SpotifyPlexSync
                                     _logger?.LogInformation("Working on Spotifyplaylist: " + playlist.Name);
                                     reports.Add(await CreateOrUpdatePlexPlayList(playlist));
                                 }
-                                catch(Exception ex){
+                                catch (Exception ex)
+                                {
                                     _logger?.LogError($"Error: Playlist {playlist.Name} not updated", ex);
                                 }
                             }
@@ -377,17 +378,11 @@ namespace SpotifyPlexSync
 
             XDocument doc = XDocument.Parse(await plexList.Content.ReadAsStringAsync());
 
-            if (doc.Descendants("Playlist").Count() == 1)
+            if (doc.Descendants("Playlist").Count() > 0)
             {
-                foreach (var pl in doc.Descendants("Playlist"))
+                foreach (var playlist in doc.Descendants("Playlist"))
                 {
-                    return pl.Attribute("ratingKey")?.Value;
-                }
-            }
-            else if (doc.Descendants("Playlist").Count() > 1)
-            {
-                foreach(var playlist in doc.Descendants("Playlist")){
-                    if(playlist.Attribute("title")?.Value == title)
+                    if (playlist.Attribute("title")?.Value == title)
                         return playlist.Attribute("ratingKey")?.Value;
                 }
                 throw new ApplicationException("PlaylistTitle ambiguous");
