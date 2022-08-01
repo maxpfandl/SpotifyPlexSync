@@ -329,7 +329,10 @@ namespace SpotifyPlexSync
 
                         }
                         else
+                        {
                             report += " - no change";
+                            _logger?.LogInformation("No change to Playlist: " + playList.Name);
+                        }
 
                     }
 
@@ -362,7 +365,7 @@ namespace SpotifyPlexSync
         private static async Task<string?> GetPlaylist(string title, HttpClient client)
         {
 
-            _logger?.LogInformation("Search for Playlist in Plex" + title);
+            _logger?.LogInformation("Search for Playlist in Plex: " + title);
             var plexList = await client.GetAsync($"{_config?["Plex:Url"]}/playlists?title={title}&X-Plex-Token={_config?["Plex:Token"]}");
 
             XDocument doc = XDocument.Parse(await plexList.Content.ReadAsStringAsync());
