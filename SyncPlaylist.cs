@@ -81,20 +81,11 @@ namespace SpotifyPlexSync
 
             await foreach (var track in spotify.Paginate(spPlaylist.Tracks!))
             {
-
-
-
                 var ft = track.Track as FullTrack;
                 if (ft != null)
                     Tracks.Add(await SearchSpotifyTracksInPlex(client, ft, existingPlaylist));
             }
 
-            // foreach (var track in spPlaylist.Tracks?.Items!)
-            // {
-            //     var ft = track.Track as FullTrack;
-            //     if (ft != null)
-            //         Tracks.Add(await SearchSpotifyTracksInPlex(client, ft));
-            // }
         }
 
         public string GetReport()
@@ -148,7 +139,7 @@ namespace SpotifyPlexSync
 
                 if (!searchResult.IsSuccessStatusCode)
                 {
-                    _logger?.LogInformation("Error while searching " + searchTerm + "\n  " + searchResult.ReasonPhrase);
+                    _logger?.LogError("Error while searching " + searchTerm + "\n  " + searchResult.ReasonPhrase);
                 }
 
                 var result = await searchResult.Content.ReadAsStringAsync();
