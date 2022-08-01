@@ -200,7 +200,7 @@ namespace SpotifyPlexSync
 
                             await foreach (var playlist in _spotify!.Paginate(playlists))
                             {
-                                Console.WriteLine($"\"{playlist.Id}|{playlist.Name}\"");
+                                Console.WriteLine($"\"{playlist.Id}|{playlist.Name}\",");
                             }
                         }
                     }
