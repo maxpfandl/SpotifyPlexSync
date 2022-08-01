@@ -26,7 +26,19 @@ Needed configuration:
 }
 ```
 
-## New feature
+## Features
+
+### Scripted run
+
+Configured playlists are synced
+
+### Specific playlist
+
+Only one specific playlist is synced
+
+`SpotifyPlexSync [playlistid]`
+
+### Full sync
 
 Read all your playlists in your library and sync them:
 
