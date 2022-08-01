@@ -25,3 +25,11 @@ Needed configuration:
     "LogUnmatched": "true|false: logs unmatched tracks to unmatched_yyyy-MM-dd.log"
 }
 ```
+
+## New feature
+
+Read all your playlists in your library and sync them:
+
+`SpotifyPlexSync all`
+
+This needs a system with a browser for authentication, so scripting is not possible.
