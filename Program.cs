@@ -74,18 +74,22 @@ namespace SpotifyPlexSync
                 await _tcs.Task;
 
             }
-            else if (_args != null && args.Length == 1)
-            {
-                await WorkOnConfiguredPlaylists(_args[0]);
-            }
             else
             {
                 var spotifyConfig = SpotifyClientConfig.CreateDefault();
                 var request = new ClientCredentialsRequest(_config?["Spotify:ClientID"]!, _config?["Spotify:ClientSecret"]!);
                 var response = await new OAuthClient(spotifyConfig).RequestToken(request);
                 _spotify = new SpotifyClient(spotifyConfig.WithToken(response.AccessToken));
-                await WorkOnConfiguredPlaylists();
+                if (_args != null && args.Length == 1)
+                {
+                    await WorkOnConfiguredPlaylists(_args[0]);
+                }
+                else
+                {
+                    await WorkOnConfiguredPlaylists();
+                }
             }
+
         }
 
         private static async Task WorkOnConfiguredPlaylists(string? playlistId = null)
@@ -164,7 +168,6 @@ namespace SpotifyPlexSync
 
             try
             {
-                // single list
                 if (_args != null && _args.Length == 1 && !String.IsNullOrEmpty(_args[0]))
                 {
                     try

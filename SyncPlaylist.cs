@@ -90,7 +90,10 @@ namespace SpotifyPlexSync
                 foreach (var cache in _cache)
                 {
                     if (cache.PTrackKey != null && cache?.SpTrack?.Id == ft.Id)
-                       return cache;
+                    {
+                        _logger?.LogInformation("Track found in Cache: \n  Spotify: " + ft.Artists[0].Name + " - " + ft.Album.Name + " - " + ft.Name + "\n  Plex:    " + cache.PTrackKey);
+                        return cache;
+                    }
                 }
 
                 var searchTerm = Regex.Replace(ft.Name, @"\(.*?\)", "").Trim(); // remove all in brackets
