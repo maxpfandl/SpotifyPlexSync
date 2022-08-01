@@ -30,24 +30,28 @@ Needed configuration:
 
 ### Scripted run
 
+`SpotifyPlexSync`
+
 Configured playlists are synced
 
 ### Specific playlist
 
-Only one specific playlist is synced
-
 `SpotifyPlexSync [playlistid]`
+
+Only one specific playlist is synced
 
 ### Full sync
 
-Read all your playlists in your library and sync them:
-
 `SpotifyPlexSync all`
+
+Read all your playlists in your library and sync them:
 
 This needs a system with a browser for authentication, so scripting is not possible.
 
 ### Extract
 
-Read all your playlists in your library and show the id's and title in the console. Useful for configuration.
+`SpotifyPlexSync extract`
+
+Read all your playlists in your library and show the id's and title in the console. Useful for initial configuration.
 
 This also needs a system with a browser for authentication.
