@@ -48,7 +48,7 @@ namespace SpotifyPlexSync
 
 
 
-            if (_args != null && args.Length == 1 && args[0] == "all")
+            if (_args != null && args.Length == 1 && (args[0] == "all" || args[0] == "extract"))
             {
                 // Make sure "http://localhost:5000/callback" is in your spotify application as redirect uri!
                 _server = new EmbedIOAuthServer(new Uri("http://localhost:5000/callback"), 5000);
@@ -174,7 +174,6 @@ namespace SpotifyPlexSync
                     {
                         if (_args[0] == "all")
                         {
-                            var user = await _spotify.UserProfile.Current();
                             var playlists = await _spotify.Playlists.CurrentUsers();
 
                             List<FullPlaylist> fullPlayLists = new List<FullPlaylist>();
@@ -192,9 +191,16 @@ namespace SpotifyPlexSync
 
                         }
                         // someting to test...
-                        if (_args[0] == "createjson")
+                        if (_args[0] == "extract")
                         {
-                            PlaylistExtractor.Extract();
+                            var playlists = await _spotify.Playlists.CurrentUsers();
+
+                            List<FullPlaylist> fullPlayLists = new List<FullPlaylist>();
+
+                            await foreach (var playlist in _spotify!.Paginate(playlists))
+                            {
+                                Console.WriteLine($"\"{playlist.Id}|{playlist.Name}\"");
+                            }
                         }
                     }
                     catch (Exception ex)
