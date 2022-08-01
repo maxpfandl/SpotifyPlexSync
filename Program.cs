@@ -15,9 +15,10 @@ namespace SpotifyPlexSync
 
         private static SpotifyClient? _spotify;
 
-        private static EmbedIOAuthServer _server;
+        private static EmbedIOAuthServer? _server;
 
-        private static string[] _args;
+        private static string[]? _args;
+        private static TaskCompletionSource<bool> _tcs = new TaskCompletionSource<bool>();
 
         static async Task Main(string[] args)
         {
@@ -47,31 +48,110 @@ namespace SpotifyPlexSync
 
 
 
-
-            // Make sure "http://localhost:5000/callback" is in your spotify application as redirect uri!
-            _server = new EmbedIOAuthServer(new Uri("http://localhost:5000/callback"), 5000);
-            await _server.Start();
-
-            _server.AuthorizationCodeReceived += OnAuthorizationCodeReceived;
-            _server.ErrorReceived += OnErrorReceived;
-
-            var request = new LoginRequest(_server.BaseUri, _config?["Spotify:ClientID"]!, LoginRequest.ResponseType.Code)
+            if (_args != null && args.Length == 1 && args[0] == "all")
             {
-                Scope = new List<string> { Scopes.UserReadEmail }
-            };
-            BrowserUtil.Open(request.ToUri());
+                // Make sure "http://localhost:5000/callback" is in your spotify application as redirect uri!
+                _server = new EmbedIOAuthServer(new Uri("http://localhost:5000/callback"), 5000);
+                await _server.Start();
 
-            Console.ReadKey();
+                _server.AuthorizationCodeReceived += OnAuthorizationCodeReceived;
+                _server.ErrorReceived += OnErrorReceived!;
 
+                var request = new LoginRequest(_server.BaseUri, _config?["Spotify:ClientID"]!, LoginRequest.ResponseType.Code)
+                {
+                    Scope = new List<string> { Scopes.UserReadEmail, Scopes.PlaylistReadPrivate, Scopes.PlaylistReadCollaborative }
+                };
+                try
+                {
+                    BrowserUtil.Open(request.ToUri());
+                }
+                catch (Exception)
+                {
+                    _logger.LogError("Unable to open URL, manually open: {0}", request.ToUri());
+                }
+                _logger.LogInformation("Waiting 5 min for authentication");
+                await Task.Delay(5 * 60 * 1000);
+                await _tcs.Task;
 
+            }
+            else if (_args != null && args.Length == 1)
+            {
+                await WorkOnConfiguredPlaylists(_args[0]);
+            }
+            else
+            {
+                var spotifyConfig = SpotifyClientConfig.CreateDefault();
+                var request = new ClientCredentialsRequest(_config?["Spotify:ClientID"]!, _config?["Spotify:ClientSecret"]!);
+                var response = await new OAuthClient(spotifyConfig).RequestToken(request);
+                _spotify = new SpotifyClient(spotifyConfig.WithToken(response.AccessToken));
+                await WorkOnConfiguredPlaylists();
+            }
+        }
+
+        private static async Task WorkOnConfiguredPlaylists(string? playlistId = null)
+        {
+            List<string> reports = new List<string>();
+            try
+            {
+                var playlists = _config?.GetSection("Sync").Get<List<string>>();
+                // single list
+
+                if (playlistId != null)
+                {
+                    var spotifyPlaylist = await _spotify!.Playlists.Get(playlistId);
+                    _logger?.LogInformation("Working on Spotifyplaylist: " + spotifyPlaylist.Name);
+                    reports.Add(await CreateOrUpdatePlexPlayList(spotifyPlaylist));
+                }
+                else
+                {
+                    List<FullPlaylist> spPlaylists = new List<FullPlaylist>();
+                    foreach (var playlist in playlists!)
+                    {
+                        try
+                        {
+                            var id = playlist.Split('|')[0];
+                            var spotifyPlaylist = await _spotify!.Playlists.Get(id);
+                            spPlaylists.Add(spotifyPlaylist);
+
+                        }
+                        catch (Exception ex)
+                        {
+                            _logger?.LogError("Getting Playlists from Spotify failed", ex);
+                        }
+                    }
+
+                    foreach (var playList in spPlaylists)
+                    {
+                        try
+                        {
+                            _logger?.LogInformation("Working on Spotifyplaylist: " + playList.Name);
+
+                            reports.Add(await CreateOrUpdatePlexPlayList(playList));
+                        }
+                        catch (Exception ex)
+                        {
+                            _logger?.LogError("Syncing with Plex failed", ex);
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger?.LogError("Getting Playlists from Spotify failed", ex);
+            }
+
+            var message = String.Join(Environment.NewLine, reports);
+
+            _logger?.LogInformation(message);
         }
 
         private static async Task OnAuthorizationCodeReceived(object sender, AuthorizationCodeResponse response)
         {
-            await _server.Stop();
+            await _server!.Stop();
 
             var config = SpotifyClientConfig.CreateDefault();
-            var tokenResponse = await new OAuthClient(config).RequestToken(
+            var oauth = new OAuthClient(config);
+            var tokenResponse = await oauth.RequestToken(
               new AuthorizationCodeTokenRequest(
                 _config?["Spotify:ClientID"]!, _config?["Spotify:ClientSecret"]!, response.Code, new Uri("http://localhost:5000/callback")
               )
@@ -84,69 +164,57 @@ namespace SpotifyPlexSync
 
             try
             {
-
-
-                var playlists = _config?.GetSection("Sync").Get<List<string>>();
-
-
                 // single list
                 if (_args != null && _args.Length == 1 && !String.IsNullOrEmpty(_args[0]))
                 {
                     try
                     {
-                        if(_args[0] == "test"){
+                        if (_args[0] == "all")
+                        {
                             var user = await _spotify.UserProfile.Current();
+                            var playlists = await _spotify.Playlists.CurrentUsers();
+
+                            List<FullPlaylist> fullPlayLists = new List<FullPlaylist>();
+
+                            await foreach (var playlist in _spotify!.Paginate(playlists))
+                            {
+                                _logger?.LogInformation("Getting Playlist: " + playlist.Name);
+                                var spotifyPlaylist = await _spotify.Playlists.Get(playlist.Id);
+                            }
+                            foreach (var playlist in fullPlayLists)
+                            {
+                                _logger?.LogInformation("Working on Spotifyplaylist: " + playlist.Name);
+                                reports.Add(await CreateOrUpdatePlexPlayList(playlist));
+                            }
+
                         }
+                        // someting to test...
                         if (_args[0] == "createjson")
                         {
                             PlaylistExtractor.Extract();
                         }
-                        else
-                        {
-                            var spotifyPlaylist = await _spotify.Playlists.Get(_args[0]);
-                            _logger.LogInformation("Working on Spotifyplaylist: " + spotifyPlaylist.Name);
-                            reports.Add(await CreateOrUpdatePlexPlayList(spotifyPlaylist));
-                        }
                     }
                     catch (Exception ex)
                     {
-                        _logger.LogError("CreateUpdate Playlist in Plex failed", ex);
-                    }
-                }
-                else
-                {
-                    foreach (var playlist in playlists!)
-                    {
-                        try
-                        {
-                            var id = playlist.Split('|')[0];
-                            var spotifyPlaylist = await _spotify.Playlists.Get(id);
-
-                            _logger.LogInformation("Working on Spotifyplaylist: " + spotifyPlaylist.Name);
-
-                            reports.Add(await CreateOrUpdatePlexPlayList(spotifyPlaylist));
-                        }
-                        catch (Exception ex)
-                        {
-                            _logger.LogError("CreateUpdate Playlist in Plex failed", ex);
-                        }
+                        _logger?.LogError("CreateUpdate Playlist in Plex failed", ex);
                     }
                 }
             }
             catch (Exception ex)
             {
-                _logger.LogError("Getting Playlists from Spotify failed", ex);
+                _logger?.LogError("Getting Playlists from Spotify failed", ex);
             }
 
             var message = String.Join(Environment.NewLine, reports);
 
-            _logger.LogInformation(message);
+            _logger?.LogInformation(message);
+            _tcs.SetResult(true);
         }
 
         private static async Task OnErrorReceived(object sender, string error, string state)
         {
             Console.WriteLine($"Aborting authorization, error received: {error}");
-            await _server.Stop();
+            await _server!.Stop();
         }
 
 
