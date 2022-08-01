@@ -181,7 +181,8 @@ namespace SpotifyPlexSync
                             await foreach (var playlist in _spotify!.Paginate(playlists))
                             {
                                 _logger?.LogInformation("Getting Playlist: " + playlist.Name);
-                                var spotifyPlaylist = await _spotify.Playlists.Get(playlist.Id);
+                                fullPlayLists.Add(await _spotify.Playlists.Get(playlist.Id));
+
                             }
                             foreach (var playlist in fullPlayLists)
                             {
