@@ -50,11 +50,41 @@ namespace SpotifyPlexSync
 
             Description = spPlaylist.Description;
 
+            List<PlexTrack> existingPlaylist = new List<PlexTrack>();
+
+            try
+            {
+                var pPlaylistKey = await Program.GetPlaylist(Name, client);
+
+                var plexList = await client.GetAsync($"{_config?["Plex:Url"]}/playlists/{pPlaylistKey}/items?X-Plex-Token={_config?["Plex:Token"]}");
+
+                XDocument doc = XDocument.Parse(await plexList.Content.ReadAsStringAsync());
+
+                foreach (var playlist in doc.Descendants("Track"))
+                {
+                    PlexTrack track = new PlexTrack();
+                    track.Title = playlist.Attribute("title")?.Value;
+                    track.Album = playlist.Attribute("parentTitle")?.Value;
+                    track.Artist = playlist.Attribute("grandparentTitle")?.Value;
+                    track.Key = playlist.Attribute("ratingKey")?.Value;
+                    existingPlaylist.Add(track);
+                }
+
+            }
+            catch (Exception ex)
+            {
+                _logger?.LogError("Playlistsearch in Plex not working", ex);
+            }
+
+
             await foreach (var track in spotify.Paginate(spPlaylist.Tracks!))
             {
+
+
+
                 var ft = track.Track as FullTrack;
                 if (ft != null)
-                    Tracks.Add(await SearchSpotifyTracksInPlex(client, ft));
+                    Tracks.Add(await SearchSpotifyTracksInPlex(client, ft, existingPlaylist));
             }
 
             // foreach (var track in spPlaylist.Tracks?.Items!)
@@ -79,7 +109,7 @@ namespace SpotifyPlexSync
 
         }
 
-        private async Task<SyncPlaylistTrack> SearchSpotifyTracksInPlex(HttpClient client, FullTrack spotifyTrack)
+        private async Task<SyncPlaylistTrack> SearchSpotifyTracksInPlex(HttpClient client, FullTrack spotifyTrack, List<PlexTrack> existingPlaylist)
         {
             SyncPlaylistTrack trackresult = new SyncPlaylistTrack();
             trackresult.SpTrack = spotifyTrack;
@@ -93,6 +123,20 @@ namespace SpotifyPlexSync
                     {
                         _logger?.LogInformation("Track found in Cache: \n  Spotify: " + ft.Artists[0].Name + " - " + ft.Album.Name + " - " + ft.Name + "\n  Plex:    " + cache.PTrackKey);
                         return cache;
+                    }
+                }
+
+
+                foreach (var existingTrack in existingPlaylist)
+                {
+                    if (Compare(ft, existingTrack.Title!, existingTrack.Artist!))
+                    {
+                        trackresult.PTrackKey = existingTrack.Key;
+                        trackresult.PTrack = existingTrack;
+                        if (!_cache.Contains(trackresult))
+                            _cache.Add(trackresult);
+                        _logger?.LogInformation("Track found in Playlist: \n  Spotify: " + ft.Artists[0].Name + " - " + ft.Album.Name + " - " + ft.Name + "\n  Plex:    " + existingTrack.Artist + " - " + existingTrack.Album + " - " + existingTrack.Title);
+                        return trackresult;
                     }
                 }
 
@@ -160,10 +204,10 @@ namespace SpotifyPlexSync
             if (spTitle == plexTitleNorm && spArtist == plexArtistNorm)
                 return true;
 
-            if (spTitle.Contains(plexTitleNorm) && spArtist.Contains(plexArtistNorm) && !plexTitle.Contains("(live"))
+            if (spTitle.Contains(plexTitleNorm) && spArtist.Contains(plexArtistNorm))
                 return true;
 
-            if (plexTitleNorm.Contains(spTitle) && plexArtistNorm.Contains(spArtist) && !plexTitle.Contains("(live"))
+            if (plexTitleNorm.Contains(spTitle) && plexArtistNorm.Contains(spArtist))
                 return true;
 
             return false;
@@ -175,7 +219,14 @@ namespace SpotifyPlexSync
     {
         public FullTrack? SpTrack { get; set; }
         public string? PTrackKey { get; set; }
+        public PlexTrack? PTrack { get; set; }
     }
 
-
+    public class PlexTrack
+    {
+        public string? Key { get; set; }
+        public string? Artist { get; set; }
+        public string? Album { get; set; }
+        public string? Title { get; set; }
+    }
 }

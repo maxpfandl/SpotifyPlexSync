@@ -370,7 +370,7 @@ namespace SpotifyPlexSync
             return null;
         }
 
-        private static async Task<string?> GetPlaylist(string title, HttpClient client)
+        public static async Task<string?> GetPlaylist(string title, HttpClient client)
         {
 
             _logger?.LogInformation("Search for Playlist in Plex: " + title);
