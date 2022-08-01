@@ -55,19 +55,21 @@ namespace SpotifyPlexSync
             try
             {
                 var pPlaylistKey = await Program.GetPlaylist(Name, client);
-
-                var plexList = await client.GetAsync($"{_config?["Plex:Url"]}/playlists/{pPlaylistKey}/items?X-Plex-Token={_config?["Plex:Token"]}");
-
-                XDocument doc = XDocument.Parse(await plexList.Content.ReadAsStringAsync());
-
-                foreach (var playlist in doc.Descendants("Track"))
+                if (pPlaylistKey != null)
                 {
-                    PlexTrack track = new PlexTrack();
-                    track.Title = playlist.Attribute("title")?.Value;
-                    track.Album = playlist.Attribute("parentTitle")?.Value;
-                    track.Artist = playlist.Attribute("grandparentTitle")?.Value;
-                    track.Key = playlist.Attribute("ratingKey")?.Value;
-                    existingPlaylist.Add(track);
+                    var plexList = await client.GetAsync($"{_config?["Plex:Url"]}/playlists/{pPlaylistKey}/items?X-Plex-Token={_config?["Plex:Token"]}");
+
+                    XDocument doc = XDocument.Parse(await plexList.Content.ReadAsStringAsync());
+
+                    foreach (var playlist in doc.Descendants("Track"))
+                    {
+                        PlexTrack track = new PlexTrack();
+                        track.Title = playlist.Attribute("title")?.Value;
+                        track.Album = playlist.Attribute("parentTitle")?.Value;
+                        track.Artist = playlist.Attribute("grandparentTitle")?.Value;
+                        track.Key = playlist.Attribute("ratingKey")?.Value;
+                        existingPlaylist.Add(track);
+                    }
                 }
 
             }
@@ -135,7 +137,7 @@ namespace SpotifyPlexSync
                         trackresult.PTrack = existingTrack;
                         if (!_cache.Contains(trackresult))
                             _cache.Add(trackresult);
-                        _logger?.LogInformation("Track found in Playlist: \n  Spotify: " + ft.Artists[0].Name + " - " + ft.Album.Name + " - " + ft.Name + "\n  Plex:    " + existingTrack.Artist + " - " + existingTrack.Album + " - " + existingTrack.Title);
+                        _logger?.LogInformation("Track found in existing Playlist: \n  Spotify: " + ft.Artists[0].Name + " - " + ft.Album.Name + " - " + ft.Name + "\n  Plex:    " + existingTrack.Artist + " - " + existingTrack.Album + " - " + existingTrack.Title);
                         return trackresult;
                     }
                 }
