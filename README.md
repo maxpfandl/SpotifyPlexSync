@@ -40,18 +40,17 @@ Configured playlists are synced
 
 Only one specific playlist is synced
 
-### Full sync
+### Full sync* 
 
 `SpotifyPlexSync all`
 
-Read all your playlists in your library and sync them:
+Read all your playlists in your library and sync them.
 
-This needs a system with a browser for authentication, so scripting is not possible.
-
-### Extract
+### Extract*
 
 `SpotifyPlexSync extract`
 
 Read all your playlists in your library and show the id's and title in the console. Useful for initial configuration.
 
-This also needs a system with a browser for authentication.
+
+*This needs a system with a browser for authentication, so scripting is not possible AND you need to configure http://localhost:5000/callback as redirect URL in your Spotify App. Not suited for scripted usage.
