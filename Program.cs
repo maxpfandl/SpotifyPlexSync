@@ -135,6 +135,10 @@ namespace SpotifyPlexSync
                         catch (Exception ex)
                         {
                             _logger?.LogError("Syncing with Plex failed", ex);
+                            if (!await CheckPlexRunning())
+                            {
+                                return;
+                            }
                         }
                     }
                 }
@@ -195,6 +199,10 @@ namespace SpotifyPlexSync
                                 catch (Exception ex)
                                 {
                                     _logger?.LogError($"Error: Playlist {playlist.Name} not updated", ex);
+                                    if (!await CheckPlexRunning())
+                                    {
+                                        return;
+                                    }
                                 }
                             }
 
@@ -227,6 +235,20 @@ namespace SpotifyPlexSync
 
             _logger?.LogInformation(message);
             _tcs.SetResult(true);
+        }
+
+        private static async Task<bool> CheckPlexRunning()
+        {
+            using (HttpClient client = new HttpClient())
+            {
+                var result = await client.GetAsync($"{_config?["Plex:Url"]}/activities?X-Plex-Token={_config?["Plex:Token"]}");
+                if (!result.IsSuccessStatusCode)
+                {
+                    _logger?.LogError("Plex seems to be unavailable, exiting");
+                    return false;
+                }
+                return true;
+            }
         }
 
         private static async Task OnErrorReceived(object sender, string error, string state)
