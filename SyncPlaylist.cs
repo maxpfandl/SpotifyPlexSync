@@ -145,7 +145,7 @@ namespace SpotifyPlexSync
 
                 foreach (var existingTrack in existingPlaylist)
                 {
-                    if (Compare(ft, existingTrack.Title!, existingTrack.Artist!))
+                    if (CompareStrict(ft, existingTrack.Title!, existingTrack.Artist!))
                     {
                         trackresult.PTrackKey = existingTrack.Key;
                         trackresult.PTrack = existingTrack;
@@ -183,17 +183,38 @@ namespace SpotifyPlexSync
                         var plexAlbum = pl.Attribute("parentTitle")?.Value;
 
 
-                        if (Compare(ft, plexTitle!, plexArtist!))
+                        if (CompareStrict(ft, plexTitle!, plexArtist!))
                         {
                             trackresult.PTrackKey = key;
                             if (!_cache.Contains(trackresult))
                                 _cache.Add(trackresult);
-                            _logger?.LogInformation("Track found on Plex: \n  Spotify: " + ft.Artists[0].Name + " - " + ft.Album.Name + " - " + ft.Name + "\n  Plex:    " + plexArtist + " - " + plexAlbum + " - " + plexTitle);
+                            _logger?.LogInformation("Track found strict on Plex: \n  Spotify: " + ft.Artists[0].Name + " - " + ft.Album.Name + " - " + ft.Name + "\n  Plex:    " + plexArtist + " - " + plexAlbum + " - " + plexTitle);
                             found = true;
                             break;
                         }
                     }
 
+                    if (!found)
+                    {
+                        foreach (var pl in hub.Descendants("Track"))
+                        {
+                            var key = pl.Attribute("ratingKey")?.Value;
+                            var plexTitle = pl.Attribute("title")?.Value;
+                            var plexArtist = pl.Attribute("grandparentTitle")?.Value;
+                            var plexAlbum = pl.Attribute("parentTitle")?.Value;
+
+
+                            if (CompareFuzzy(ft, plexTitle!, plexArtist!))
+                            {
+                                trackresult.PTrackKey = key;
+                                if (!_cache.Contains(trackresult))
+                                    _cache.Add(trackresult);
+                                _logger?.LogInformation("Track found fuzzy on Plex: \n  Spotify: " + ft.Artists[0].Name + " - " + ft.Album.Name + " - " + ft.Name + "\n  Plex:    " + plexArtist + " - " + plexAlbum + " - " + plexTitle);
+                                found = true;
+                                break;
+                            }
+                        }
+                    }
 
                 }
                 if (!found)
@@ -211,7 +232,21 @@ namespace SpotifyPlexSync
             return trackresult;
         }
 
-        private bool Compare(FullTrack track, string plexTitle, string plexArtist)
+        private bool CompareStrict(FullTrack track, string plexTitle, string plexArtist)
+        {
+            var pattern = @"[^0-9a-zA-Z:,]+";
+            var spTitle = Regex.Replace(track.Name, pattern, "").ToLower();
+            var spArtist = Regex.Replace(track.Artists[0].Name, pattern, "").ToLower();
+            var plexTitleNorm = Regex.Replace(plexTitle, pattern, "").ToLower();
+            var plexArtistNorm = Regex.Replace(plexArtist, pattern, "").ToLower();
+
+            if (spTitle == plexTitleNorm && spArtist == plexArtistNorm)
+                return true;
+
+            return false;
+        }
+
+        private bool CompareFuzzy(FullTrack track, string plexTitle, string plexArtist)
         {
             var pattern = @"[^0-9a-zA-Z:,]+";
             var spTitle = Regex.Replace(track.Name, pattern, "").ToLower();
