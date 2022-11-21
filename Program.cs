@@ -379,7 +379,8 @@ namespace SpotifyPlexSync
 
         private static async Task<string?> CreatePlayListPlex(string name, HttpClient client)
         {
-            var result = await client.PostAsync($"{_config?["Plex:Url"]}/playlists?uri=server%3A%2F%{_config?["Plex:ServerId"]}%2Fcom.plexapp.plugins.library%2Flibrary%2Fmetadata%2F1109%2C1200&includeExternalMedia=1&title={name}&smart=0&type=audio&X-Plex-Token={_config?["Plex:Token"]}", null);
+            var encName = HttpUtility.UrlEncode(name);
+            var result = await client.PostAsync($"{_config?["Plex:Url"]}/playlists?uri=server%3A%2F%{_config?["Plex:ServerId"]}%2Fcom.plexapp.plugins.library%2Flibrary%2Fmetadata%2F1109%2C1200&includeExternalMedia=1&title={encName}&smart=0&type=audio&X-Plex-Token={_config?["Plex:Token"]}", null);
 
             XDocument doc = XDocument.Parse(await result.Content.ReadAsStringAsync());
 
@@ -394,9 +395,10 @@ namespace SpotifyPlexSync
 
         public static async Task<string?> GetPlaylist(string title, HttpClient client)
         {
-
+            
             _logger?.LogInformation("Search for Playlist in Plex: " + title);
-            var plexList = await client.GetAsync($"{_config?["Plex:Url"]}/playlists?title={title}&X-Plex-Token={_config?["Plex:Token"]}");
+            var enctitle = HttpUtility.UrlEncode(title);
+            var plexList = await client.GetAsync($"{_config?["Plex:Url"]}/playlists?title={enctitle}&X-Plex-Token={_config?["Plex:Token"]}");
 
             XDocument doc = XDocument.Parse(await plexList.Content.ReadAsStringAsync());
 
