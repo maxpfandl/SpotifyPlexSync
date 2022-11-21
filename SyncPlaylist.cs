@@ -78,22 +78,28 @@ namespace SpotifyPlexSync
                 _logger?.LogError("Playlistsearch in Plex not working", ex);
             }
 
-
-            await foreach (var track in spotify.Paginate(spPlaylist.Tracks!))
+            try
             {
-                var ft = track.Track as FullTrack;
-                if (ft != null)
+                await foreach (var track in spotify.Paginate(spPlaylist.Tracks!))
                 {
-                    try
+                    var ft = track.Track as FullTrack;
+                    if (ft != null)
                     {
-                        Tracks.Add(await SearchSpotifyTracksInPlex(client, ft, existingPlaylist));
+                        try
+                        {
+                            Tracks.Add(await SearchSpotifyTracksInPlex(client, ft, existingPlaylist));
+                        }
+                        catch (Exception ex)
+                        {
+                            _logger?.LogError("Track not found with exception: " + ex.Message);
+                        }
                     }
-                    catch (Exception ex)
-                    {
-                        _logger?.LogError("Track not found with exception: " + ex.Message);
-                    }
-                }
 
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger?.LogError("Playlist init failed: " + ex.Message);
             }
 
         }
@@ -144,7 +150,7 @@ namespace SpotifyPlexSync
                 }
 
                 var searchTerm = Regex.Replace(ft.Name, @"\(.*?\)", "").Trim(); // remove all in () brackets
-                searchTerm = Regex.Replace(ft.Name, @"\[.*?\]", "").Trim(); // remove all in [] brackets
+                searchTerm = Regex.Replace(searchTerm, @"\[.*?\]", "").Trim(); // remove all in [] brackets
                 searchTerm = ft.Artists[0].Name + " " + searchTerm;
                 searchTerm = HttpUtility.UrlEncode(searchTerm);
                 var searchResult = await client.GetAsync(_config?["Plex:Url"] + $"/hubs/search?query={searchTerm}&limit=100&X-Plex-Token={_config?["Plex:Token"]}");
