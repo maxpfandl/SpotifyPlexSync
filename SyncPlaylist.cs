@@ -80,9 +80,16 @@ namespace SpotifyPlexSync
 
             try
             {
+                List<FullTrack> items = new List<FullTrack>();
                 await foreach (var track in spotify.Paginate(spPlaylist.Tracks!))
                 {
-                    var ft = track.Track as FullTrack;
+                    FullTrack? ft = track.Track as FullTrack;
+                    if (ft != null)
+                        items.Add(ft);
+                }
+
+                foreach (var ft in items)
+                {
                     if (ft != null)
                     {
                         try
