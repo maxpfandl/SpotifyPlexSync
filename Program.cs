@@ -80,6 +80,7 @@ namespace SpotifyPlexSync
                 var request = new ClientCredentialsRequest(_config?["Spotify:ClientID"]!, _config?["Spotify:ClientSecret"]!);
                 var response = await new OAuthClient(spotifyConfig).RequestToken(request);
                 _spotify = new SpotifyClient(spotifyConfig.WithToken(response.AccessToken));
+                
                 if (_args != null && args.Length == 1)
                 {
                     await WorkOnConfiguredPlaylists(_args[0]);
@@ -131,6 +132,13 @@ namespace SpotifyPlexSync
                             _logger?.LogInformation("Working on Spotifyplaylist: " + playList.Name);
 
                             reports.Add(await CreateOrUpdatePlexPlayList(playList));
+
+                            // refresh client
+                            var spotifyConfig = SpotifyClientConfig.CreateDefault();
+                            var request = new ClientCredentialsRequest(_config?["Spotify:ClientID"]!, _config?["Spotify:ClientSecret"]!);
+                            var response = await new OAuthClient(spotifyConfig).RequestToken(request);
+                            _spotify = new SpotifyClient(spotifyConfig.WithToken(response.AccessToken));
+
                         }
                         catch (Exception ex)
                         {
@@ -395,7 +403,7 @@ namespace SpotifyPlexSync
 
         public static async Task<string?> GetPlaylist(string title, HttpClient client)
         {
-            
+
             _logger?.LogInformation("Search for Playlist in Plex: " + title);
             var enctitle = HttpUtility.UrlEncode(title);
             var plexList = await client.GetAsync($"{_config?["Plex:Url"]}/playlists?title={enctitle}&X-Plex-Token={_config?["Plex:Token"]}");
