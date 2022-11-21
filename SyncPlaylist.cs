@@ -83,7 +83,17 @@ namespace SpotifyPlexSync
             {
                 var ft = track.Track as FullTrack;
                 if (ft != null)
-                    Tracks.Add(await SearchSpotifyTracksInPlex(client, ft, existingPlaylist));
+                {
+                    try
+                    {
+                        Tracks.Add(await SearchSpotifyTracksInPlex(client, ft, existingPlaylist));
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger?.LogError("Track not found with exception: " + ex.Message);
+                    }
+                }
+
             }
 
         }
