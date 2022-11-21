@@ -133,7 +133,9 @@ namespace SpotifyPlexSync
                     }
                 }
 
-                var searchTerm = Regex.Replace(ft.Name, @"\(.*?\)", "").Trim(); // remove all in brackets
+                var searchTerm = Regex.Replace(ft.Name, @"\(.*?\)", "").Trim(); // remove all in () brackets
+                searchTerm = Regex.Replace(ft.Name, @"\[.*?\]", "").Trim(); // remove all in [] brackets
+                searchTerm = ft.Artists[0].Name + " " + searchTerm;
                 searchTerm = HttpUtility.UrlEncode(searchTerm);
                 var searchResult = await client.GetAsync(_config?["Plex:Url"] + $"/hubs/search?query={searchTerm}&limit=100&X-Plex-Token={_config?["Plex:Token"]}");
 
