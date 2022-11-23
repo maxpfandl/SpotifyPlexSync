@@ -27,6 +27,8 @@ namespace SpotifyPlexSync
         public string? Name { get; private set; }
         public string? Description { get; private set; }
 
+        public string? Author { get; private set; }
+
         public string? PosterUrl { get; private set; }
         public string? PlexId { get; set; }
         public List<SyncPlaylistTrack> Tracks { get; }
@@ -45,6 +47,12 @@ namespace SpotifyPlexSync
         public async Task Initialize(FullPlaylist spPlaylist, HttpClient client, SpotifyClient spotify)
         {
             Name = _config?["Prefix"] + spPlaylist.Name;
+            Author = spPlaylist.Owner?.DisplayName;
+            if (_config.GetValue<bool>("AddAuthorToTitle") && !string.IsNullOrEmpty(Author))
+            {
+                Name = Name + " by " + Author;
+            }
+
             if (spPlaylist.Images?.Count > 0)
                 PosterUrl = spPlaylist.Images?[0].Url;
 
@@ -222,7 +230,7 @@ namespace SpotifyPlexSync
 
                     var text = ft.Artists[0].Name + " - " + ft.Album.Name + " - " + ft.Name + "||" + searchTerm;
                     _logger?.LogWarning("Track not found on Plex: " + text);
-                    if (_config?["LogUnmatched"].ToLower() == "true")
+                    if (_config?.GetValue<bool>("LogUnmatched") ?? false)
                     {
                         File.AppendAllLines($"sptfplexsync_unmatched_{DateTime.Now.ToString("yyyy-MM-dd")}.log", new List<string>() { text });
                     }

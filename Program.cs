@@ -80,7 +80,7 @@ namespace SpotifyPlexSync
                 var request = new ClientCredentialsRequest(_config?["Spotify:ClientID"]!, _config?["Spotify:ClientSecret"]!);
                 var response = await new OAuthClient(spotifyConfig).RequestToken(request);
                 _spotify = new SpotifyClient(spotifyConfig.WithToken(response.AccessToken));
-                
+
                 if (_args != null && args.Length == 1)
                 {
                     await WorkOnConfiguredPlaylists(_args[0]);
@@ -224,7 +224,15 @@ namespace SpotifyPlexSync
 
                             await foreach (var playlist in _spotify!.Paginate(playlists))
                             {
-                                Console.WriteLine($"\"{playlist.Id}|{playlist.Name}\",");
+                                if (_config.GetValue<bool>("AddAuthorToTitle") && !string.IsNullOrEmpty(playlist.Owner.DisplayName))
+                                {
+                                    Console.WriteLine($"\"{playlist.Id}|{playlist.Name} by {playlist.Owner.DisplayName}\",");
+                                }
+                                else
+                                {
+                                    Console.WriteLine($"\"{playlist.Id}|{playlist.Name}\",");
+                                }
+
                             }
                         }
                     }

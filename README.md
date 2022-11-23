@@ -22,7 +22,8 @@ Needed configuration:
         "playlistid2|playlistdescription (only used for this json, not used as title)"
     ],
     "Prefix": "Spotify - :will used as prefix for the synced playlist",
-    "LogUnmatched": "true|false: logs unmatched tracks to unmatched_yyyy-MM-dd.log"
+    "LogUnmatched": "true|false: logs unmatched tracks to unmatched_yyyy-MM-dd.log",
+    "AddAuthorToTitle": "true|false: add author to title of the playlist like 'myplaylist by author'"
 }
 ```
 
