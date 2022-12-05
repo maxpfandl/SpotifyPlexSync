@@ -5,6 +5,7 @@ using System.Text.RegularExpressions;
 using System.Web;
 using Microsoft.Extensions.Logging;
 using SpotifyAPI.Web.Auth;
+using System.Text;
 
 namespace SpotifyPlexSync
 {
@@ -143,6 +144,7 @@ namespace SpotifyPlexSync
                         catch (Exception ex)
                         {
                             _logger?.LogError("Syncing with Plex failed", ex);
+                            reports.Add($"Playlist: {playList.Name} - ERROR");
                             if (!await CheckPlexRunning())
                             {
                                 return;
@@ -159,6 +161,7 @@ namespace SpotifyPlexSync
             var message = String.Join(Environment.NewLine, reports);
 
             _logger?.LogInformation(message);
+
         }
 
         private static async Task OnAuthorizationCodeReceived(object sender, AuthorizationCodeResponse response)
@@ -248,9 +251,27 @@ namespace SpotifyPlexSync
             }
 
             var message = String.Join(Environment.NewLine, reports);
-
+            await SendToWebhook(_config.GetValue<string>("WebHook"), _config.GetValue<string>("WebHookBasicAuth"), message);
             _logger?.LogInformation(message);
             _tcs.SetResult(true);
+        }
+
+        private static async Task SendToWebhook(string webHook, string auth, string message)
+        {
+            if (!String.IsNullOrEmpty(webHook))
+            {
+                using (HttpClient client = new HttpClient())
+                {
+                    if (!String.IsNullOrEmpty(auth))
+                    {
+                        var byteArray = Encoding.ASCII.GetBytes("madmap:IHU62zxIWVQfagUgi5DY");
+                        client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Basic", Convert.ToBase64String(byteArray));
+                    }
+                    string json = $"{{\"event\":\"SpotifyPlexSync\",\"message\":\"{message}\"}}";
+                    await client.PostAsync(webHook, new StringContent(json, Encoding.UTF8, "application/json"));
+                }
+            }
+
         }
 
         private static async Task<bool> CheckPlexRunning()
