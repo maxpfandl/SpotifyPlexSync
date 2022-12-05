@@ -101,7 +101,7 @@ namespace SpotifyPlexSync
             {
                 var playlists = _config?.GetSection("Sync").Get<List<string>>();
                 // single list
-
+                reports.Add("Starting " + DateTime.Now.ToString("G"));
                 if (playlistId != null)
                 {
                     var spotifyPlaylist = await _spotify!.Playlists.Get(playlistId);
@@ -144,7 +144,7 @@ namespace SpotifyPlexSync
                         catch (Exception ex)
                         {
                             _logger?.LogError("Syncing with Plex failed", ex);
-                            reports.Add($"Playlist: {playList.Name} - ERROR");
+                            reports.Add($"Fatal Error");
                             if (!await CheckPlexRunning())
                             {
                                 return;
@@ -156,10 +156,11 @@ namespace SpotifyPlexSync
             catch (Exception ex)
             {
                 _logger?.LogError("Getting Playlists from Spotify failed", ex);
+                reports.Add("Ending " + DateTime.Now.ToString("G"));
             }
-
+            reports.Add("Ending " + DateTime.Now.ToString("G"));
             var message = String.Join(Environment.NewLine, reports);
-
+            await SendToWebhook(_config.GetValue<string>("WebHook"), _config.GetValue<string>("WebHookBasicAuth"), message);
             _logger?.LogInformation(message);
 
         }
@@ -251,7 +252,7 @@ namespace SpotifyPlexSync
             }
 
             var message = String.Join(Environment.NewLine, reports);
-            await SendToWebhook(_config.GetValue<string>("WebHook"), _config.GetValue<string>("WebHookBasicAuth"), message);
+
             _logger?.LogInformation(message);
             _tcs.SetResult(true);
         }
