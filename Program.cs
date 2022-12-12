@@ -159,8 +159,24 @@ namespace SpotifyPlexSync
                 reports.Add("Ending " + DateTime.Now.ToString("G"));
             }
             reports.Add("Ending " + DateTime.Now.ToString("G"));
-            var message = String.Join(Environment.NewLine, reports);
-            await SendToWebhook(_config.GetValue<string>("WebHook"), _config.GetValue<string>("WebHookBasicAuth"), message);
+
+            if (reports.Count > 30)
+            {
+                int i = 0;
+                int chunkSize = 30;
+                string[][] result = reports.GroupBy(s => i++ / chunkSize).Select(g => g.ToArray()).ToArray();
+                foreach (var resultarr in result)
+                {
+                    var message = String.Join(Environment.NewLine, resultarr);
+                    await SendToWebhook(_config.GetValue<string>("WebHook"), _config.GetValue<string>("WebHookBasicAuth"), message);
+                }
+            }
+            else
+            {
+                var message = String.Join(Environment.NewLine, reports);
+                await SendToWebhook(_config.GetValue<string>("WebHook"), _config.GetValue<string>("WebHookBasicAuth"), message);
+            }
+
             _logger?.LogInformation(message);
 
         }
@@ -259,6 +275,9 @@ namespace SpotifyPlexSync
 
         private static async Task SendToWebhook(string webHook, string auth, string message)
         {
+            if (message.Length > 4000)
+                throw new ApplicationException("Webhook message too long (>4000 chars)");
+
             if (!String.IsNullOrEmpty(webHook))
             {
                 using (HttpClient client = new HttpClient())
