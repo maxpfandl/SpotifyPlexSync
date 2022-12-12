@@ -169,15 +169,17 @@ namespace SpotifyPlexSync
                 {
                     var message = String.Join(Environment.NewLine, resultarr);
                     await SendToWebhook(_config.GetValue<string>("WebHook"), _config.GetValue<string>("WebHookBasicAuth"), message);
+                    _logger?.LogInformation(message);
                 }
             }
             else
             {
                 var message = String.Join(Environment.NewLine, reports);
                 await SendToWebhook(_config.GetValue<string>("WebHook"), _config.GetValue<string>("WebHookBasicAuth"), message);
+                _logger?.LogInformation(message);
             }
 
-            _logger?.LogInformation(message);
+            
 
         }
 
