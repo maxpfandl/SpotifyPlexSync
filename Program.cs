@@ -117,7 +117,12 @@ namespace SpotifyPlexSync
                         {
                             var id = playlist.Split('|')[0];
                             var spotifyPlaylist = await _spotify!.Playlists.Get(id);
-                            spPlaylists.Add(spotifyPlaylist);
+                            if (spotifyPlaylist != null)
+                                spPlaylists.Add(spotifyPlaylist);
+                            else
+                            {
+                                reports.Add($"{playlist}: Fatal Error");
+                            }
 
                         }
                         catch (Exception ex)
@@ -128,6 +133,7 @@ namespace SpotifyPlexSync
 
                     foreach (var playList in spPlaylists)
                     {
+
                         try
                         {
                             _logger?.LogInformation("Working on Spotifyplaylist: " + playList.Name);
@@ -144,7 +150,7 @@ namespace SpotifyPlexSync
                         catch (Exception ex)
                         {
                             _logger?.LogError("Syncing with Plex failed", ex);
-                            reports.Add($"Fatal Error");
+                            reports.Add($"{playList.Name}: Fatal Error");
                             if (!await CheckPlexRunning())
                             {
                                 return;
@@ -179,7 +185,7 @@ namespace SpotifyPlexSync
                 _logger?.LogInformation(message);
             }
 
-            
+
 
         }
 

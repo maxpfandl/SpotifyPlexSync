@@ -129,7 +129,7 @@ namespace SpotifyPlexSync
                     found++;
             });
 
-            return $"Playlist: {Name} - found {found}/{Tracks.Count}";
+            return $"{Name} - found {found}/{Tracks.Count}";
 
         }
 
