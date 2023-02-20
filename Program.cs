@@ -252,14 +252,31 @@ namespace SpotifyPlexSync
 
                             await foreach (var playlist in _spotify!.Paginate(playlists))
                             {
-                                if (_config.GetValue<bool>("AddAuthorToTitle") && !string.IsNullOrEmpty(playlist.Owner.DisplayName))
+                                try
                                 {
-                                    Console.WriteLine($"\"{playlist.Id}|{playlist.Name} by {playlist.Owner.DisplayName}\",");
+                                    var fplst = await _spotify.Playlists.Get(playlist.Id);
+                                    if (fplst != null && fplst.Tracks!.Items!.Count > 0)
+                                    {
+                                        if (_config.GetValue<bool>("AddAuthorToTitle") && !string.IsNullOrEmpty(playlist.Owner.DisplayName))
+                                        {
+                                            Console.WriteLine($"\"{playlist.Id}|{playlist.Name} by {playlist.Owner.DisplayName}\",");
+                                        }
+                                        else
+                                        {
+                                            Console.WriteLine($"\"{playlist.Id}|{playlist.Name}\",");
+                                        }
+                                    }
+                                    else
+                                    {
+                                        Console.WriteLine($"\"ERROR: {playlist!.Id}|{playlist.Name}\",");
+                                    }
                                 }
-                                else
+                                catch
                                 {
-                                    Console.WriteLine($"\"{playlist.Id}|{playlist.Name}\",");
+                                    Console.WriteLine($"\"ERROR: {playlist!.Id}|{playlist.Name}\",");
                                 }
+
+
 
                             }
                         }
