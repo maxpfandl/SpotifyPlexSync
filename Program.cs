@@ -121,7 +121,7 @@ namespace SpotifyPlexSync
 
                             if (spotifyPlaylist != null)
                             {
-                                if (spotifyPlaylist.Tracks?.Total <= maxTracks)
+                                if (maxTracks == 0 || spotifyPlaylist.Tracks?.Total <= maxTracks)
                                 {
                                     spPlaylists.Add(spotifyPlaylist);
                                 }
