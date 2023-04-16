@@ -100,6 +100,7 @@ namespace SpotifyPlexSync
             try
             {
                 var playlists = _config?.GetSection("Sync").Get<List<string>>();
+                var maxTracks = _config?.GetValue<int>("MaxTracks");
                 // single list
                 reports.Add("Starting " + DateTime.Now.ToString("G"));
                 if (playlistId != null)
@@ -117,8 +118,18 @@ namespace SpotifyPlexSync
                         {
                             var id = playlist.Split('|')[0];
                             var spotifyPlaylist = await _spotify!.Playlists.Get(id);
+
                             if (spotifyPlaylist != null)
-                                spPlaylists.Add(spotifyPlaylist);
+                            {
+                                if (spotifyPlaylist.Tracks?.Total <= maxTracks)
+                                {
+                                    spPlaylists.Add(spotifyPlaylist);
+                                }
+                                else
+                                {
+                                    reports.Add($"{playlist}: Too Many Tracks!");
+                                }
+                            }
                             else
                             {
                                 reports.Add($"{playlist}: Fatal Error");
