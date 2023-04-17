@@ -127,7 +127,7 @@ namespace SpotifyPlexSync
                                 }
                                 else
                                 {
-                                    reports.Add($"{playlist}: Too Many Tracks!");
+                                    reports.Add($"{playlist}: Too Many Tracks! " + spotifyPlaylist.Tracks?.Total + "/" + maxTracks);
                                 }
                             }
                             else
@@ -391,7 +391,7 @@ namespace SpotifyPlexSync
                                 await client.PutAsync($"{_config?["Plex:Url"]}/playlists/{playList.PlexId}/items?uri=server%3A%2F%2F{_config?["Plex:ServerId"]}%2Fcom.plexapp.plugins.library%2Flibrary%2Fmetadata%2F{track.PTrackKey}&X-Plex-Token={_config?["Plex:Token"]}", null);
                             }
                         }
-                        report += " - new";
+                        report += " | new";
                     }
 
 
@@ -451,13 +451,13 @@ namespace SpotifyPlexSync
                                     await client.PutAsync($"{_config?["Plex:Url"]}/playlists/{playList.PlexId}/items?uri=server%3A%2F%2F{_config?["Plex:ServerId"]}%2Fcom.plexapp.plugins.library%2Flibrary%2Fmetadata%2F{track.PTrackKey}&X-Plex-Token={_config?["Plex:Token"]}", null);
                                 }
                             }
-                            report += " - recreated";
+                            report += " | recreated";
 
 
                         }
                         else
                         {
-                            report += " - no change";
+                            report += " | no change";
                             _logger?.LogInformation("No change to Playlist: " + playList.Name);
                         }
 
@@ -466,7 +466,7 @@ namespace SpotifyPlexSync
                     //Update Poster + Desc
                     if (_config.GetValue<Boolean>("AddReportToDescription"))
                     {
-                        report += " - " + DateTime.Now.ToString("yyyy-MM-dd HH:mm");
+                        report += " | " + DateTime.Now.ToString("yyyy-MM-dd HH:mm");
                         playList.AddToDescription(report);
                     }
 

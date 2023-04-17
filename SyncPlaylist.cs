@@ -50,7 +50,10 @@ namespace SpotifyPlexSync
             {
                 Description = report;
             }
-            Description += "\n" + report;
+            else
+            {
+                Description += "\n" + report;
+            }
         }
 
         public async Task Initialize(FullPlaylist spPlaylist, HttpClient client, SpotifyClient spotify)
@@ -138,7 +141,7 @@ namespace SpotifyPlexSync
                     found++;
             });
 
-            return $"{Name} - found {found}/{Tracks.Count}";
+            return $"{Name} | found {found}/{Tracks.Count}";
 
         }
 
