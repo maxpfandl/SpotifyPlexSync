@@ -25,6 +25,7 @@ Needed configuration:
     "LogUnmatched": "true|false: logs unmatched tracks to unmatched_yyyy-MM-dd.log",
     "AddAuthorToTitle": "true|false: add author to title of the playlist like 'myplaylist by author'",
     "MaxTracks": 150, #set 0 to ignore
+    "AddReportToDescription": false,
     "WebHook": "posts json with errors/statusmessages to this webhook", 
     "WebHookBasicAuth":"user:password for webhook if needed",
 }

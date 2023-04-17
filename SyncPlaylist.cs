@@ -44,6 +44,11 @@ namespace SpotifyPlexSync
             }
         }
 
+        public void AddToDescription(string report)
+        {
+            Description += "\n" + report;
+        }
+
         public async Task Initialize(FullPlaylist spPlaylist, HttpClient client, SpotifyClient spotify)
         {
             Name = _config?["Prefix"] + spPlaylist.Name;
