@@ -378,7 +378,7 @@ namespace SpotifyPlexSync
                     if (playList.PlexId == null)
                     {
                         playList.PlexId = await CreatePlayListPlex(playList.Name!, client);
-                        
+
                         // var poster = playList.PosterUrl;
                         // await client.PostAsync($"{_config?["Plex:Url"]}/library/metadata/{playList.PlexId}/posters?url={poster}&X-Plex-Token={_config?["Plex:Token"]}", null);
                         // await client.PutAsync($"{_config?["Plex:Url"]}/playlists/{playList.PlexId}?summary={playList.Description}&X-Plex-Token={_config?["Plex:Token"]}", null);
@@ -466,7 +466,7 @@ namespace SpotifyPlexSync
                     //Update Poster + Desc
                     if (_config.GetValue<Boolean>("AddReportToDescription"))
                     {
-                        report += " - "+DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm");
+                        report += " - " + DateTime.Now.ToString("yyyy-MM-dd HH:mm");
                         playList.AddToDescription(report);
                     }
 
