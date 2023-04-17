@@ -46,6 +46,10 @@ namespace SpotifyPlexSync
 
         public void AddToDescription(string report)
         {
+            if (!String.IsNullOrEmpty(Description))
+            {
+                Description = report;
+            }
             Description += "\n" + report;
         }
 
