@@ -165,7 +165,7 @@ namespace SpotifyPlexSync
 
                 foreach (var existingTrack in existingPlaylist)
                 {
-                    if (CompareStrict(ft, existingTrack.Title!, existingTrack.Artist!))
+                    if (CompareStrict(ft, existingTrack.Title!, existingTrack.Artist!, existingTrack.Album!))
                     {
                         trackresult.PTrackKey = existingTrack.Key;
                         trackresult.PTrack = existingTrack;
@@ -203,7 +203,7 @@ namespace SpotifyPlexSync
                         var plexAlbum = pl.Attribute("parentTitle")?.Value;
 
 
-                        if (CompareStrict(ft, plexTitle!, plexArtist!))
+                        if (CompareStrict(ft, plexTitle!, plexArtist!, plexAlbum!))
                         {
                             trackresult.PTrackKey = key;
                             if (!_cache.Contains(trackresult))
@@ -252,15 +252,17 @@ namespace SpotifyPlexSync
             return trackresult;
         }
 
-        private bool CompareStrict(FullTrack track, string plexTitle, string plexArtist)
+        private bool CompareStrict(FullTrack track, string plexTitle, string plexArtist, string plexAlbum)
         {
             var pattern = @"[^0-9a-zA-Z:,]+";
             var spTitle = Regex.Replace(track.Name, pattern, "").ToLower();
             var spArtist = Regex.Replace(track.Artists[0].Name, pattern, "").ToLower();
+            var spAlbum = Regex.Replace(track.Album.Name, pattern, "").ToLower();
             var plexTitleNorm = Regex.Replace(plexTitle, pattern, "").ToLower();
             var plexArtistNorm = Regex.Replace(plexArtist, pattern, "").ToLower();
+            var plexAlbumNorm = Regex.Replace(plexAlbum, pattern, "").ToLower();
 
-            if (spTitle == plexTitleNorm && spArtist == plexArtistNorm)
+            if (spTitle == plexTitleNorm && spArtist == plexArtistNorm && spAlbum == plexAlbumNorm)
                 return true;
 
             return false;

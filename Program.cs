@@ -471,7 +471,7 @@ namespace SpotifyPlexSync
                     }
 
                     await client.PostAsync($"{_config?["Plex:Url"]}/library/metadata/{playList.PlexId}/posters?url={playList.PosterUrl}&X-Plex-Token={_config?["Plex:Token"]}", null);
-                    await client.PutAsync($"{_config?["Plex:Url"]}/playlists/{playList.PlexId}?summary={playList.Description}&X-Plex-Token={_config?["Plex:Token"]}", null);
+                    await client.PutAsync($"{_config?["Plex:Url"]}/playlists/{playList.PlexId}?summary={HttpUtility.UrlEncode(playList.Description)}&X-Plex-Token={_config?["Plex:Token"]}", null);
 
 
                 }
