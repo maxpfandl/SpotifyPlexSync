@@ -68,7 +68,11 @@ namespace SpotifyPlexSync
             if (spPlaylist.Images?.Count > 0)
                 PosterUrl = spPlaylist.Images?[0].Url;
 
-            Description = spPlaylist.Description;
+            if (spPlaylist.Description != null)
+            {
+                //remove links
+                Description = Regex.Replace(spPlaylist.Description, @"<a\b[^>]+>([^<]*(?:(?!</a)<[^<]*)*)</a>", "$1");
+            }
 
             List<PlexTrack> existingPlaylist = new List<PlexTrack>();
 
