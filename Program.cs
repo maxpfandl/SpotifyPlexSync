@@ -6,6 +6,7 @@ using System.Web;
 using Microsoft.Extensions.Logging;
 using SpotifyAPI.Web.Auth;
 using System.Text;
+using Newtonsoft.Json;
 
 namespace SpotifyPlexSync
 {
@@ -28,7 +29,8 @@ namespace SpotifyPlexSync
 
             var builder = new ConfigurationBuilder()
              .AddJsonFile($"appsettings.json", true, true)
-             .AddJsonFile($"appsettings.my.json", true, true);
+             .AddJsonFile($"appsettings.my.json", true, true)
+             .AddJsonFile($"appsettings.playlists.json", true, true);
             _config = builder.Build();
 
             using var loggerFactory = LoggerFactory.Create(builder =>
@@ -103,7 +105,7 @@ namespace SpotifyPlexSync
                 var maxTracks = _config?.GetValue<int>("MaxTracks");
                 // single list
                 reports.Add("Starting " + DateTime.Now.ToString("G"));
-                if (playlistId != null)
+                if (playlistId != null && playlistId != "new")
                 {
                     var spotifyPlaylist = await _spotify!.Playlists.Get(playlistId);
                     _logger?.LogInformation("Working on Spotifyplaylist: " + spotifyPlaylist.Name);
@@ -149,7 +151,7 @@ namespace SpotifyPlexSync
                         {
                             _logger?.LogInformation("Working on Spotifyplaylist: " + playList.Name);
 
-                            reports.Add(await CreateOrUpdatePlexPlayList(playList));
+                            reports.Add(await CreateOrUpdatePlexPlayList(playList, playlistId == "new"));
 
                             // refresh client
                             var spotifyConfig = SpotifyClientConfig.CreateDefault();
@@ -261,6 +263,8 @@ namespace SpotifyPlexSync
 
                             List<FullPlaylist> fullPlayLists = new List<FullPlaylist>();
 
+                            List<string> playlistsJson = new List<string>();
+
                             await foreach (var playlist in _spotify!.Paginate(playlists))
                             {
                                 try
@@ -270,10 +274,12 @@ namespace SpotifyPlexSync
                                     {
                                         if (_config.GetValue<bool>("AddAuthorToTitle") && !string.IsNullOrEmpty(playlist.Owner.DisplayName))
                                         {
+                                            playlistsJson.Add($"{playlist.Id}|{playlist.Name} by {playlist.Owner.DisplayName}");
                                             Console.WriteLine($"\"{playlist.Id}|{playlist.Name} by {playlist.Owner.DisplayName}\",");
                                         }
                                         else
                                         {
+                                            playlistsJson.Add($"{playlist.Id}|{playlist.Name}");
                                             Console.WriteLine($"\"{playlist.Id}|{playlist.Name}\",");
                                         }
                                     }
@@ -290,6 +296,10 @@ namespace SpotifyPlexSync
 
 
                             }
+                            var jsonConfig = new { Sync = playlistsJson };
+                            string json = JsonConvert.SerializeObject(jsonConfig);
+                            File.WriteAllText("appsettings.playlists.json", json);
+
                         }
                     }
                     catch (Exception ex)
@@ -351,7 +361,7 @@ namespace SpotifyPlexSync
         }
 
 
-        private static async Task<string> CreateOrUpdatePlexPlayList(FullPlaylist spotifyPl)
+        private static async Task<string> CreateOrUpdatePlexPlayList(FullPlaylist spotifyPl, bool newOnly = false)
         {
             string report = "";
 
@@ -360,7 +370,7 @@ namespace SpotifyPlexSync
             using (HttpClient client = new HttpClient())
             {
 
-                await playList.Initialize(spotifyPl, client, _spotify!);
+                await playList.Initialize(spotifyPl, client, _spotify!, newOnly);
 
                 report = playList.GetReport();
 
@@ -470,7 +480,7 @@ namespace SpotifyPlexSync
                         playList.AddToDescription(report);
                     }
 
-                    await client.PostAsync($"{_config?["Plex:Url"]}/library/metadata/{playList.PlexId}/posters?url={playList.PosterUrl}&X-Plex-Token={_config?["Plex:Token"]}", null);
+                    await client.PostAsync($"{_config?["Plex:Url"]}/library/metadata/{playList.PlexId}/posters?url={HttpUtility.UrlEncode(playList.PosterUrl)}&X-Plex-Token={_config?["Plex:Token"]}", null);
                     await client.PutAsync($"{_config?["Plex:Url"]}/playlists/{playList.PlexId}?summary={HttpUtility.UrlEncode(playList.Description)}&X-Plex-Token={_config?["Plex:Token"]}", null);
 
 

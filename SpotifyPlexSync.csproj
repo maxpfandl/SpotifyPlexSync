@@ -35,6 +35,9 @@
     <None Update="appsettings.my.json" Condition="'$(Flavor)'!='build'">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
+        <None Update="appsettings.playlists.json" Condition="'$(Flavor)'!='build'">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
   </ItemGroup>
 
 </Project>

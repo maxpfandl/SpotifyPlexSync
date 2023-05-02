@@ -56,7 +56,7 @@ namespace SpotifyPlexSync
             }
         }
 
-        public async Task Initialize(FullPlaylist spPlaylist, HttpClient client, SpotifyClient spotify)
+        public async Task Initialize(FullPlaylist spPlaylist, HttpClient client, SpotifyClient spotify, bool newOnly = false)
         {
             Name = _config?["Prefix"] + spPlaylist.Name;
             Author = spPlaylist.Owner?.DisplayName;
@@ -67,6 +67,11 @@ namespace SpotifyPlexSync
 
             if (spPlaylist.Images?.Count > 0)
                 PosterUrl = spPlaylist.Images?[0].Url;
+
+            // if (!String.IsNullOrEmpty(PosterUrl) && PosterUrl.EndsWith("/large"))
+            // {
+            //     PosterUrl = PosterUrl.Replace("/large", "/default");
+            // }
 
             if (spPlaylist.Description != null)
             {
@@ -81,6 +86,13 @@ namespace SpotifyPlexSync
                 var pPlaylistKey = await Program.GetPlaylist(Name, client);
                 if (pPlaylistKey != null)
                 {
+                    if (newOnly)
+                    {
+                        _logger?.LogWarning($"Playlist {Name} existing but started with switch new only");
+                        return;
+
+                    }
+
                     var plexList = await client.GetAsync($"{_config?["Plex:Url"]}/playlists/{pPlaylistKey}/items?X-Plex-Token={_config?["Plex:Token"]}");
 
                     XDocument doc = XDocument.Parse(await plexList.Content.ReadAsStringAsync());

@@ -454,6 +454,7 @@ $RECYCLE.BIN/
 !.vscode/extensions.json
 
 appsettings.my.json
+appsettings.playlists.json
 publish.cmd
 build.cmd
 /build/
