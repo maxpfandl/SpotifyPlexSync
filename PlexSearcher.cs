@@ -54,10 +54,37 @@ namespace SpotifyPlexSync
                 c?.Attribute("grandparentTitle")?.Value.ToLower() == artist.ToLower()
                         select c;
 
+            if (track.FirstOrDefault() == null)
+            {
+                track = from c in _tracks.Descendants("Track")
+                        where
+                c?.Attribute("title")?.Value.ToLower() == title.ToLower() &&
+                c?.Attribute("grandparentTitle")?.Value.ToLower() == artist.ToLower()
+                        select c;
+            }
+
+            if (track.FirstOrDefault() == null)
+            {
+                track = from c in _tracks.Descendants("Track")
+                        where
+                c.Attribute("title")!.Value.ToLower().Contains(title.ToLower()) &&
+                c?.Attribute("grandparentTitle")?.Value.ToLower() == artist.ToLower()
+                        select c;
+            }
+
+            if (track.FirstOrDefault() == null)
+            {
+                track = from c in _tracks.Descendants("Track")
+                        where
+                title.ToLower().Contains(c.Attribute("title")!.Value.ToLower()) &&
+                c?.Attribute("grandparentTitle")?.Value.ToLower() == artist.ToLower()
+                        select c;
+            }
 
             Console.WriteLine(track?.FirstOrDefault()?.Attribute("title")?.Value);
             Console.WriteLine(track?.FirstOrDefault()?.Attribute("parentTitle")?.Value);
             Console.WriteLine(track?.FirstOrDefault()?.Attribute("grandparentTitle")?.Value);
+            Console.WriteLine();
 
 
             return track?.FirstOrDefault()?.Attribute("ratingKey")?.Value;
