@@ -12,17 +12,19 @@ namespace SpotifyPlexSync
         private IConfiguration? _config;
 
         private static List<SyncPlaylistTrack> _cache = new List<SyncPlaylistTrack>();
+        private static PlexSearcher _searcher;
 
         private ILogger? _logger;
-        private SyncPlaylist()
-        {
-            Tracks = new List<SyncPlaylistTrack>();
-        }
-        public SyncPlaylist(IConfiguration config, ILogger logger)
+        // private SyncPlaylist()
+        // {
+        //     Tracks = new List<SyncPlaylistTrack>();
+        // }
+        public SyncPlaylist(IConfiguration config, ILogger logger, PlexSearcher searcher)
         {
             Tracks = new List<SyncPlaylistTrack>();
             _config = config;
             _logger = logger;
+            _searcher = searcher;
         }
         public string? Name { get; private set; }
         public string? Description { get; private set; }
@@ -130,7 +132,14 @@ namespace SpotifyPlexSync
                     {
                         try
                         {
-                            Tracks.Add(await SearchSpotifyTracksInPlex(client, ft, existingPlaylist));
+                            if (_config.GetValue<Boolean>("UseLocalSearch"))
+                            {
+                                Tracks.Add(SearchSpotifyTracksInLocalXML(ft));
+                            }
+                            else
+                            {
+                                Tracks.Add(await SearchSpotifyTracksInPlex(client, ft, existingPlaylist));
+                            }
                         }
                         catch (Exception ex)
                         {
@@ -145,6 +154,14 @@ namespace SpotifyPlexSync
                 _logger?.LogError("Playlist init failed: " + ex.Message);
             }
 
+        }
+
+        private SyncPlaylistTrack SearchSpotifyTracksInLocalXML(FullTrack spotifyTrack)
+        {
+            SyncPlaylistTrack trackresult = new SyncPlaylistTrack();
+            trackresult.SpTrack = spotifyTrack;
+            trackresult.PTrackKey = _searcher.GetKeyForTrack(spotifyTrack.Artists[0].Name, spotifyTrack.Album.Name, spotifyTrack.Name);
+            return trackresult;
         }
 
         public string GetReport()

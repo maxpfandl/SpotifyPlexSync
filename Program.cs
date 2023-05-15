@@ -377,7 +377,7 @@ namespace SpotifyPlexSync
         {
             string report = "";
 
-            SyncPlaylist playList = new SyncPlaylist(_config!, _logger!);
+            SyncPlaylist playList = new SyncPlaylist(_config!, _logger!, );
 
             using (HttpClient client = new HttpClient())
             {
