@@ -50,6 +50,10 @@ namespace SpotifyPlexSync
             _logger = loggerFactory.CreateLogger<Program>();
 
 
+            PlexSearcher search = new PlexSearcher(_config, _logger);
+            await search.Init();
+            return;
+
 
             if (_args != null && args.Length == 1 && (args[0] == "all" || args[0] == "extract"))
             {
