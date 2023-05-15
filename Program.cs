@@ -19,6 +19,8 @@ namespace SpotifyPlexSync
 
         private static EmbedIOAuthServer? _server;
 
+        private static PlexSearcher? _searcher;
+
         private static string[]? _args;
         private static TaskCompletionSource<bool> _tcs = new TaskCompletionSource<bool>();
 
@@ -50,17 +52,9 @@ namespace SpotifyPlexSync
             _logger = loggerFactory.CreateLogger<Program>();
 
 
-            PlexSearcher search = new PlexSearcher(_config, _logger);
-            await search.Init();
+            _searcher = new PlexSearcher(_config, _logger);
 
-            search.GetKeyForTrack("Die Toten Hosen","Kauf mich!", "Alles aus Liebe");
-            search.GetKeyForTrack("Die Toten Hosen","xxx", "Alles aus Liebe");
-            search.GetKeyForTrack("Die Toten Hosen","Kauf mich!", "Alles aus Liebe (live version)");
-            search.GetKeyForTrack("Die Toten Hosen","Kauf mich!", "Zurück zum Glück");
-            search.GetKeyForTrack("Die Toten Hosen","Kauf mich!", "Schrei nach liebe");
-            search.GetKeyForTrack("Die Toten Hosen","Kauf mich!", "Alles aus Liebe");
 
-            return;
 
 
             if (_args != null && args.Length == 1 && (args[0] == "all" || args[0] == "extract"))
@@ -91,6 +85,8 @@ namespace SpotifyPlexSync
             }
             else
             {
+                if (_config.GetValue<Boolean>("UseLocalSearch"))
+                    await _searcher.Init();
                 var spotifyConfig = SpotifyClientConfig.CreateDefault();
                 var request = new ClientCredentialsRequest(_config?["Spotify:ClientID"]!, _config?["Spotify:ClientSecret"]!);
                 var response = await new OAuthClient(spotifyConfig).RequestToken(request);
@@ -121,7 +117,7 @@ namespace SpotifyPlexSync
                 {
                     var spotifyPlaylist = await _spotify!.Playlists.Get(playlistId);
                     _logger?.LogInformation("Working on Spotifyplaylist: " + spotifyPlaylist.Name);
-                    reports.Add(await CreateOrUpdatePlexPlayList(spotifyPlaylist));
+                    reports.Add(await CreateOrUpdatePlexPlayList(spotifyPlaylist, _searcher));
                 }
                 else
                 {
@@ -163,7 +159,7 @@ namespace SpotifyPlexSync
                         {
                             _logger?.LogInformation("Working on Spotifyplaylist: " + playList.Name);
 
-                            reports.Add(await CreateOrUpdatePlexPlayList(playList, playlistId == "new"));
+                            reports.Add(await CreateOrUpdatePlexPlayList(playList, _searcher, playlistId == "new"));
 
                             // refresh client
                             var spotifyConfig = SpotifyClientConfig.CreateDefault();
@@ -255,7 +251,7 @@ namespace SpotifyPlexSync
                                 try
                                 {
                                     _logger?.LogInformation("Working on Spotifyplaylist: " + playlist.Name);
-                                    reports.Add(await CreateOrUpdatePlexPlayList(playlist));
+                                    reports.Add(await CreateOrUpdatePlexPlayList(playlist, _searcher));
                                 }
                                 catch (Exception ex)
                                 {
@@ -373,11 +369,11 @@ namespace SpotifyPlexSync
         }
 
 
-        private static async Task<string> CreateOrUpdatePlexPlayList(FullPlaylist spotifyPl, bool newOnly = false)
+        private static async Task<string> CreateOrUpdatePlexPlayList(FullPlaylist spotifyPl, PlexSearcher? searcher = null, bool newOnly = false)
         {
             string report = "";
 
-            SyncPlaylist playList = new SyncPlaylist(_config!, _logger!, );
+            SyncPlaylist playList = new SyncPlaylist(_config!, _logger!, searcher);
 
             using (HttpClient client = new HttpClient())
             {

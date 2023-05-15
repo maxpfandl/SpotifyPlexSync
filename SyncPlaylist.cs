@@ -12,14 +12,14 @@ namespace SpotifyPlexSync
         private IConfiguration? _config;
 
         private static List<SyncPlaylistTrack> _cache = new List<SyncPlaylistTrack>();
-        private static PlexSearcher _searcher;
+        private static PlexSearcher? _searcher;
 
         private ILogger? _logger;
         // private SyncPlaylist()
         // {
         //     Tracks = new List<SyncPlaylistTrack>();
         // }
-        public SyncPlaylist(IConfiguration config, ILogger logger, PlexSearcher searcher)
+        public SyncPlaylist(IConfiguration config, ILogger logger, PlexSearcher? searcher)
         {
             Tracks = new List<SyncPlaylistTrack>();
             _config = config;
@@ -94,7 +94,6 @@ namespace SpotifyPlexSync
                         return;
 
                     }
-
                     var plexList = await client.GetAsync($"{_config?["Plex:Url"]}/playlists/{pPlaylistKey}/items?X-Plex-Token={_config?["Plex:Token"]}");
 
                     XDocument doc = XDocument.Parse(await plexList.Content.ReadAsStringAsync());
@@ -134,7 +133,11 @@ namespace SpotifyPlexSync
                         {
                             if (_config.GetValue<Boolean>("UseLocalSearch"))
                             {
-                                Tracks.Add(SearchSpotifyTracksInLocalXML(ft));
+                                var result = SearchSpotifyTracksInLocalXML(ft);
+                                if (result.PTrackKey != null)
+                                    Tracks.Add(result);
+                                else
+                                    Tracks.Add(await SearchSpotifyTracksInPlex(client, ft, existingPlaylist));
                             }
                             else
                             {
@@ -158,9 +161,23 @@ namespace SpotifyPlexSync
 
         private SyncPlaylistTrack SearchSpotifyTracksInLocalXML(FullTrack spotifyTrack)
         {
+            if (_searcher == null)
+                throw new ApplicationException("PlexSearcher not initialized");
+
             SyncPlaylistTrack trackresult = new SyncPlaylistTrack();
             trackresult.SpTrack = spotifyTrack;
-            trackresult.PTrackKey = _searcher.GetKeyForTrack(spotifyTrack.Artists[0].Name, spotifyTrack.Album.Name, spotifyTrack.Name);
+            var result = _searcher.GetKeyForTrack(spotifyTrack.Artists[0].Name, spotifyTrack.Album.Name, spotifyTrack.Name);
+
+            if (result?.PTrackKey != null)
+            {
+                _logger?.LogInformation("Track found in PlexSearcher: \n  Spotify: " + spotifyTrack.Artists[0].Name + " - " + spotifyTrack.Album.Name + " - " + spotifyTrack.Name + "\n  Plex:    " + result.PTrack?.Artist + " - " + result.PTrack?.Album + " - " + result.PTrack?.Title);
+                trackresult.PTrackKey = result.PTrackKey;
+                trackresult.PTrack = result.PTrack;
+            }
+            else
+            {
+                _logger?.LogWarning("Track not found in PlexSearcher: \n  Spotify: " + spotifyTrack.Artists[0].Name + " - " + spotifyTrack.Album.Name + " - " + spotifyTrack.Name);
+            }
             return trackresult;
         }
 
