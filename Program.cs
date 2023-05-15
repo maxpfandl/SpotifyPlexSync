@@ -52,6 +52,7 @@ namespace SpotifyPlexSync
 
             PlexSearcher search = new PlexSearcher(_config, _logger);
             await search.Init();
+            search.GetKeyForTrack("Die Toten Hosen","Kauf mich!", "Alles aus Liebe");
             return;
 
 
