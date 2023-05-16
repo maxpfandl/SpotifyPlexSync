@@ -88,6 +88,24 @@ namespace SpotifyPlexSync
                         select c;
             }
 
+            if (track.FirstOrDefault() == null)
+            {
+                track = from c in _tracks.Descendants("Track")
+                        where
+                title.Clean().Contains(c.Attribute("title")!.Value.Clean()) &&
+                artist.Clean().Contains(c.Attribute("grandparentTitle")!.Value.Clean())
+                        select c;
+            }
+
+            if (track.FirstOrDefault() == null)
+            {
+                track = from c in _tracks.Descendants("Track")
+                        where
+                c.Attribute("title")!.Value.Clean().Contains(title.Clean()) &&
+                c.Attribute("grandparentTitle")!.Value.Clean().Contains(artist.Clean())
+                        select c;
+            }
+
             // Console.WriteLine(track?.FirstOrDefault()?.Attribute("title")?.Value);
             // Console.WriteLine(track?.FirstOrDefault()?.Attribute("parentTitle")?.Value);
             // Console.WriteLine(track?.FirstOrDefault()?.Attribute("grandparentTitle")?.Value);

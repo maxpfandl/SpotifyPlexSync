@@ -133,15 +133,28 @@ namespace SpotifyPlexSync
                         {
                             if (_config.GetValue<Boolean>("UseLocalSearch"))
                             {
-                                var result = SearchSpotifyTracksInLocalXML(ft);
-                                if (result.PTrackKey != null)
+                                var result = SearchInExistingPlaylist(existingPlaylist, ft);
+
+                                if (result != null && result.PTrackKey != null)
                                     Tracks.Add(result);
                                 else
-                                    Tracks.Add(await SearchSpotifyTracksInPlex(client, ft, existingPlaylist));
+                                {
+                                    result = result = SearchSpotifyTracksInLocalXML(ft);
+                                    // if (result != null && result.PTrackKey != null)
+                                        Tracks.Add(result);
+                                        
+                                    // else
+                                        // Tracks.Add(await SearchSpotifyTracksInPlex(client, ft));
+                                }
                             }
                             else
                             {
-                                Tracks.Add(await SearchSpotifyTracksInPlex(client, ft, existingPlaylist));
+                                var result = SearchInExistingPlaylist(existingPlaylist, ft);
+
+                                if (result != null && result.PTrackKey != null)
+                                    Tracks.Add(result);
+                                else
+                                    Tracks.Add(await SearchSpotifyTracksInPlex(client, ft));
                             }
                         }
                         catch (Exception ex)
@@ -176,7 +189,7 @@ namespace SpotifyPlexSync
             }
             else
             {
-                _logger?.LogWarning("Track not found in PlexSearcher: \n  Spotify: " + spotifyTrack.Artists[0].Name + " - " + spotifyTrack.Album.Name + " - " + spotifyTrack.Name);
+                _logger?.LogWarning("Track not found in PlexSearcher: Spotify: " + spotifyTrack.Artists[0].Name + " - " + spotifyTrack.Album.Name + " - " + spotifyTrack.Name);
             }
             return trackresult;
         }
@@ -195,7 +208,26 @@ namespace SpotifyPlexSync
 
         }
 
-        private async Task<SyncPlaylistTrack> SearchSpotifyTracksInPlex(HttpClient client, FullTrack spotifyTrack, List<PlexTrack> existingPlaylist)
+        private SyncPlaylistTrack? SearchInExistingPlaylist(List<PlexTrack> existingPlaylist, FullTrack spotifyTrack)
+        {
+            SyncPlaylistTrack trackresult = new SyncPlaylistTrack();
+            trackresult.SpTrack = spotifyTrack;
+            foreach (var existingTrack in existingPlaylist)
+            {
+                if (CompareStrict(spotifyTrack, existingTrack.Title!, existingTrack.Artist!, existingTrack.Album!))
+                {
+                    trackresult.PTrackKey = existingTrack.Key;
+                    trackresult.PTrack = existingTrack;
+                    if (!_cache.Contains(trackresult))
+                        _cache.Add(trackresult);
+                    _logger?.LogInformation("Track found in existing Playlist: \n  Spotify: " + spotifyTrack.Artists[0].Name + " - " + spotifyTrack.Album.Name + " - " + spotifyTrack.Name + "\n  Plex:    " + existingTrack.Artist + " - " + existingTrack.Album + " - " + existingTrack.Title);
+                    return trackresult;
+                }
+            }
+            return null;
+        }
+
+        private async Task<SyncPlaylistTrack> SearchSpotifyTracksInPlex(HttpClient client, FullTrack spotifyTrack)
         {
             SyncPlaylistTrack trackresult = new SyncPlaylistTrack();
             trackresult.SpTrack = spotifyTrack;
@@ -209,20 +241,6 @@ namespace SpotifyPlexSync
                     {
                         _logger?.LogInformation("Track found in Cache: \n  Spotify: " + ft.Artists[0].Name + " - " + ft.Album.Name + " - " + ft.Name + "\n  Plex:    " + cache.PTrackKey);
                         return cache;
-                    }
-                }
-
-
-                foreach (var existingTrack in existingPlaylist)
-                {
-                    if (CompareStrict(ft, existingTrack.Title!, existingTrack.Artist!, existingTrack.Album!))
-                    {
-                        trackresult.PTrackKey = existingTrack.Key;
-                        trackresult.PTrack = existingTrack;
-                        if (!_cache.Contains(trackresult))
-                            _cache.Add(trackresult);
-                        _logger?.LogInformation("Track found in existing Playlist: \n  Spotify: " + ft.Artists[0].Name + " - " + ft.Album.Name + " - " + ft.Name + "\n  Plex:    " + existingTrack.Artist + " - " + existingTrack.Album + " - " + existingTrack.Title);
-                        return trackresult;
                     }
                 }
 
