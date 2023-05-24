@@ -338,7 +338,7 @@ namespace SpotifyPlexSync
                 {
                     if (!String.IsNullOrEmpty(auth))
                     {
-                        var byteArray = Encoding.ASCII.GetBytes("madmap:IHU62zxIWVQfagUgi5DY");
+                        var byteArray = Encoding.ASCII.GetBytes(auth);
                         client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Basic", Convert.ToBase64String(byteArray));
                     }
                     string json = $"{{\"event\":\"SpotifyPlexSync\",\"message\":\"{message}\"}}";
