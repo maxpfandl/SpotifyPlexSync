@@ -140,7 +140,7 @@ namespace SpotifyPlexSync
                     }
                 });
 
-
+                Tracks.Sort();
 
                 // foreach (var ft in items)
                 // {
