@@ -117,12 +117,17 @@ namespace SpotifyPlexSync
 
             try
             {
-                List<FullTrack> items = new List<FullTrack>();
+                List<Tuple<int, FullTrack>> items = new List<Tuple<int, FullTrack>>();
+                int order = 0;
                 await foreach (var track in spotify.Paginate(spPlaylist.Tracks!))
                 {
+
                     FullTrack? ft = track.Track as FullTrack;
+
                     if (ft != null)
-                        items.Add(ft);
+                    {
+                        items.Add(new(order++, ft));
+                    }
                 }
                 var options = new ParallelOptions { MaxDegreeOfParallelism = 6 };
                 await Parallel.ForEachAsync(items, options, async (item, token) =>
@@ -131,7 +136,7 @@ namespace SpotifyPlexSync
                     {
                         try
                         {
-                            Tracks.Add(await SearchSpotifyTracksInPlex(client, item, existingPlaylist));
+                            Tracks.Add(await SearchSpotifyTracksInPlex(client, item.Item2, existingPlaylist, item.Item1));
                         }
                         catch (Exception ex)
                         {
@@ -180,10 +185,11 @@ namespace SpotifyPlexSync
 
         }
 
-        private async Task<SyncPlaylistTrack> SearchSpotifyTracksInPlex(HttpClient client, FullTrack spotifyTrack, List<PlexTrack> existingPlaylist)
+        private async Task<SyncPlaylistTrack> SearchSpotifyTracksInPlex(HttpClient client, FullTrack spotifyTrack, List<PlexTrack> existingPlaylist, int sortOrder)
         {
             SyncPlaylistTrack trackresult = new SyncPlaylistTrack();
             trackresult.SpTrack = spotifyTrack;
+            trackresult.SortOrder = sortOrder;
             var ft = spotifyTrack;
             if (ft != null)
             {
@@ -342,10 +348,12 @@ namespace SpotifyPlexSync
         public string? PTrackKey { get; set; }
         public PlexTrack? PTrack { get; set; }
 
+        public int SortOrder { get; set; }
+
         public int CompareTo(SyncPlaylistTrack? other)
         {
-            if (other != null && other.SpTrack != null && this != null && this.SpTrack != null)
-                return other!.SpTrack!.TrackNumber.CompareTo(this!.SpTrack!.TrackNumber);
+            if (other != null && this != null )
+                return this.SortOrder.CompareTo(other.SortOrder);
             return 0;
         }
 
