@@ -123,22 +123,37 @@ namespace SpotifyPlexSync
                     if (ft != null)
                         items.Add(ft);
                 }
-
-                foreach (var ft in items)
+                var options = new ParallelOptions { MaxDegreeOfParallelism = 4 };
+                await Parallel.ForEachAsync(items, options, async (item, token) =>
                 {
-                    if (ft != null)
+                    if (item != null)
                     {
                         try
                         {
-                            Tracks.Add(await SearchSpotifyTracksInPlex(client, ft, existingPlaylist));
+                            Tracks.Add(await SearchSpotifyTracksInPlex(client, item, existingPlaylist));
                         }
                         catch (Exception ex)
                         {
                             _logger?.LogError("Track not found with exception: " + ex.Message);
                         }
                     }
+                });
 
-                }
+                // foreach (var ft in items)
+                // {
+                //     if (ft != null)
+                //     {
+                //         try
+                //         {
+                //             Tracks.Add(await SearchSpotifyTracksInPlex(client, ft, existingPlaylist));
+                //         }
+                //         catch (Exception ex)
+                //         {
+                //             _logger?.LogError("Track not found with exception: " + ex.Message);
+                //         }
+                //     }
+
+                // }
             }
             catch (Exception ex)
             {
