@@ -12,6 +12,7 @@ namespace SpotifyPlexSync
         private IConfiguration? _config;
 
         private static List<SyncPlaylistTrack> _cache = new List<SyncPlaylistTrack>();
+        private static List<SyncPlaylistTrack> _nfCache = new List<SyncPlaylistTrack>();
 
         private ILogger? _logger;
         private SyncPlaylist()
@@ -123,7 +124,7 @@ namespace SpotifyPlexSync
                     if (ft != null)
                         items.Add(ft);
                 }
-                var options = new ParallelOptions { MaxDegreeOfParallelism = 4 };
+                var options = new ParallelOptions { MaxDegreeOfParallelism = 6 };
                 await Parallel.ForEachAsync(items, options, async (item, token) =>
                 {
                     if (item != null)
@@ -138,6 +139,8 @@ namespace SpotifyPlexSync
                         }
                     }
                 });
+
+
 
                 // foreach (var ft in items)
                 // {
@@ -161,6 +164,7 @@ namespace SpotifyPlexSync
             }
 
         }
+
 
         public string GetReport()
         {
@@ -189,6 +193,15 @@ namespace SpotifyPlexSync
                     if (cache.PTrackKey != null && cache?.SpTrack?.Id == ft.Id)
                     {
                         _logger?.LogInformation("Track found in Cache: \n  Spotify: " + ft.Artists[0].Name + " - " + ft.Album.Name + " - " + ft.Name + "\n  Plex:    " + cache.PTrackKey);
+                        return cache;
+                    }
+                }
+
+                foreach (var cache in _nfCache)
+                {
+                    if (cache?.SpTrack?.Id == ft.Id)
+                    {
+                        _logger?.LogInformation("Track found in NotFoundCache: \n  Spotify: " + ft.Artists[0].Name + " - " + ft.Album.Name + " - " + ft.Name);
                         return cache;
                     }
                 }
@@ -277,6 +290,8 @@ namespace SpotifyPlexSync
                     {
                         File.AppendAllLines($"sptfplexsync_unmatched_{DateTime.Now.ToString("yyyy-MM-dd")}.log", new List<string>() { text });
                     }
+                    if (!_nfCache.Contains(trackresult))
+                        _nfCache.Add(trackresult);
                 }
 
             }
@@ -321,11 +336,19 @@ namespace SpotifyPlexSync
 
     }
 
-    public class SyncPlaylistTrack
+    public class SyncPlaylistTrack : IComparable<SyncPlaylistTrack>
     {
         public FullTrack? SpTrack { get; set; }
         public string? PTrackKey { get; set; }
         public PlexTrack? PTrack { get; set; }
+
+        public int CompareTo(SyncPlaylistTrack? other)
+        {
+            if (other != null && other.SpTrack != null && this != null && this.SpTrack != null)
+                return other!.SpTrack!.TrackNumber.CompareTo(this!.SpTrack!.TrackNumber);
+            return 0;
+        }
+
     }
 
     public class PlexTrack
