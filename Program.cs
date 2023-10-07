@@ -7,6 +7,8 @@ using Microsoft.Extensions.Logging;
 using SpotifyAPI.Web.Auth;
 using System.Text;
 using Newtonsoft.Json;
+using Swan.Parsers;
+using Newtonsoft.Json.Linq;
 
 namespace SpotifyPlexSync
 {
@@ -101,7 +103,15 @@ namespace SpotifyPlexSync
             List<string> reports = new List<string>();
             try
             {
-                var playlists = _config?.GetSection("Sync").Get<List<string>>();
+                List<string> playlists = new List<string>();
+                if (_args != null && _args[0] == "lidarr")
+                {
+                    playlists = await GetPlaylistsFromLidarr(_config?["Lidarr:Url"], _config?["Lidarr:ApiKey"]);
+                }
+                else
+                {
+                    playlists = _config?.GetSection("Sync").Get<List<string>>()!;
+                }
                 var maxTracks = _config?.GetValue<int>("MaxTracks");
                 // single list
                 reports.Add("Starting " + DateTime.Now.ToString("G"));
@@ -200,6 +210,69 @@ namespace SpotifyPlexSync
 
 
 
+        }
+
+        private async static Task<List<string>> GetPlaylistsFromLidarr(string? url, string? apiKey)
+        {
+            var result = new List<string>();
+            var endpoint = url + "api/v1/importlist";
+            var requestMovie = new HttpRequestMessage(HttpMethod.Get, endpoint);
+            requestMovie.Headers.Add("X-Api-Key", apiKey);
+            using (HttpClient client = new HttpClient())
+            {
+                var resultMovie = await client.SendAsync(requestMovie);
+                if (resultMovie.IsSuccessStatusCode)
+                {
+                    string payload = await (new StreamReader(resultMovie.Content.ReadAsStream())).ReadToEndAsync();
+
+                    var root = ImportList.FromJson(payload);
+
+
+
+                    foreach (var list in root)
+                    {
+                        if (list.Name == "Spotify Playlists")
+                        {
+                            foreach (var field in list.Fields)
+                            {
+                                if (field.Name == "playlistIds")
+                                {
+                                    var ids = field.Value!.Value;
+                                    return ids.StringArray;
+
+                                }
+                            }
+                        }
+                    }
+
+                    // dynamic lists = JArray.Parse(payload);
+                    // foreach (dynamic list in lists)
+                    // { 
+                    //     if(list.name == "Spotify Playlists")
+                    //     {
+
+                    //         dynamic fields = JObject.Parse(list.fields);
+                    //         foreach(var field in fields){
+                    //             if(field.name=="playlistIds"){
+                    //                 dynamic playlistIds = JArray.Parse(field.value);
+                    //                 foreach(var playlist in playlistIds){
+                    //                     result.Add(playlist);
+                    //                     Console.WriteLine(playlist);
+                    //                 }
+                    //             }
+                    //         }
+                    //     }
+                    // }
+
+
+
+
+                }
+
+
+            }
+
+            return result;
         }
 
         private static async Task OnAuthorizationCodeReceived(object sender, AuthorizationCodeResponse response)
