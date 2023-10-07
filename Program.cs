@@ -115,7 +115,7 @@ namespace SpotifyPlexSync
                 var maxTracks = _config?.GetValue<int>("MaxTracks");
                 // single list
                 reports.Add("Starting " + DateTime.Now.ToString("G"));
-                if (playlistId != null && playlistId != "new")
+                if (playlistId != null && playlistId != "new" && playlistId != "lidarr")
                 {
                     var spotifyPlaylist = await _spotify!.Playlists.Get(playlistId);
                     _logger?.LogInformation("Working on Spotifyplaylist: " + spotifyPlaylist.Name);
