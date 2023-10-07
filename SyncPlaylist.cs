@@ -12,6 +12,7 @@ namespace SpotifyPlexSync
         private IConfiguration? _config;
 
         private static List<SyncPlaylistTrack> _cache = new List<SyncPlaylistTrack>();
+        private static List<SyncPlaylistTrack> _nfCache = new List<SyncPlaylistTrack>();
 
         private ILogger? _logger;
         private SyncPlaylist()
@@ -116,29 +117,51 @@ namespace SpotifyPlexSync
 
             try
             {
-                List<FullTrack> items = new List<FullTrack>();
+                List<Tuple<int, FullTrack>> items = new List<Tuple<int, FullTrack>>();
+                int order = 0;
                 await foreach (var track in spotify.Paginate(spPlaylist.Tracks!))
                 {
-                    FullTrack? ft = track.Track as FullTrack;
-                    if (ft != null)
-                        items.Add(ft);
-                }
 
-                foreach (var ft in items)
-                {
+                    FullTrack? ft = track.Track as FullTrack;
+
                     if (ft != null)
+                    {
+                        items.Add(new(order++, ft));
+                    }
+                }
+                var options = new ParallelOptions { MaxDegreeOfParallelism = 6 };
+                await Parallel.ForEachAsync(items, options, async (item, token) =>
+                {
+                    if (item != null)
                     {
                         try
                         {
-                            Tracks.Add(await SearchSpotifyTracksInPlex(client, ft, existingPlaylist));
+                            Tracks.Add(await SearchSpotifyTracksInPlex(client, item.Item2, existingPlaylist, item.Item1));
                         }
                         catch (Exception ex)
                         {
                             _logger?.LogError("Track not found with exception: " + ex.Message);
                         }
                     }
+                });
 
-                }
+                Tracks.Sort();
+
+                // foreach (var ft in items)
+                // {
+                //     if (ft != null)
+                //     {
+                //         try
+                //         {
+                //             Tracks.Add(await SearchSpotifyTracksInPlex(client, ft, existingPlaylist));
+                //         }
+                //         catch (Exception ex)
+                //         {
+                //             _logger?.LogError("Track not found with exception: " + ex.Message);
+                //         }
+                //     }
+
+                // }
             }
             catch (Exception ex)
             {
@@ -146,6 +169,7 @@ namespace SpotifyPlexSync
             }
 
         }
+
 
         public string GetReport()
         {
@@ -161,10 +185,11 @@ namespace SpotifyPlexSync
 
         }
 
-        private async Task<SyncPlaylistTrack> SearchSpotifyTracksInPlex(HttpClient client, FullTrack spotifyTrack, List<PlexTrack> existingPlaylist)
+        private async Task<SyncPlaylistTrack> SearchSpotifyTracksInPlex(HttpClient client, FullTrack spotifyTrack, List<PlexTrack> existingPlaylist, int sortOrder)
         {
             SyncPlaylistTrack trackresult = new SyncPlaylistTrack();
             trackresult.SpTrack = spotifyTrack;
+            trackresult.SortOrder = sortOrder;
             var ft = spotifyTrack;
             if (ft != null)
             {
@@ -174,6 +199,15 @@ namespace SpotifyPlexSync
                     if (cache.PTrackKey != null && cache?.SpTrack?.Id == ft.Id)
                     {
                         _logger?.LogInformation("Track found in Cache: \n  Spotify: " + ft.Artists[0].Name + " - " + ft.Album.Name + " - " + ft.Name + "\n  Plex:    " + cache.PTrackKey);
+                        return cache;
+                    }
+                }
+
+                foreach (var cache in _nfCache)
+                {
+                    if (cache?.SpTrack?.Id == ft.Id)
+                    {
+                        _logger?.LogInformation("Track found in NotFoundCache: \n  Spotify: " + ft.Artists[0].Name + " - " + ft.Album.Name + " - " + ft.Name);
                         return cache;
                     }
                 }
@@ -262,6 +296,8 @@ namespace SpotifyPlexSync
                     {
                         File.AppendAllLines($"sptfplexsync_unmatched_{DateTime.Now.ToString("yyyy-MM-dd")}.log", new List<string>() { text });
                     }
+                    if (!_nfCache.Contains(trackresult))
+                        _nfCache.Add(trackresult);
                 }
 
             }
@@ -306,11 +342,21 @@ namespace SpotifyPlexSync
 
     }
 
-    public class SyncPlaylistTrack
+    public class SyncPlaylistTrack : IComparable<SyncPlaylistTrack>
     {
         public FullTrack? SpTrack { get; set; }
         public string? PTrackKey { get; set; }
         public PlexTrack? PTrack { get; set; }
+
+        public int SortOrder { get; set; }
+
+        public int CompareTo(SyncPlaylistTrack? other)
+        {
+            if (other != null && this != null )
+                return this.SortOrder.CompareTo(other.SortOrder);
+            return 0;
+        }
+
     }
 
     public class PlexTrack
