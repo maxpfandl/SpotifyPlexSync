@@ -104,7 +104,7 @@ namespace SpotifyPlexSync
             try
             {
                 List<string> playlists = new List<string>();
-                if (_args != null && _args[0] == "lidarr")
+                if (_args != null && (_args[0] == "lidarr" || _args[0] == "lidarrnew"))
                 {
                     playlists = await GetPlaylistsFromLidarr(_config?["Lidarr:Url"], _config?["Lidarr:ApiKey"]);
                 }
@@ -115,7 +115,7 @@ namespace SpotifyPlexSync
                 var maxTracks = _config?.GetValue<int>("MaxTracks");
                 // single list
                 reports.Add("Starting " + DateTime.Now.ToString("G"));
-                if (playlistId != null && playlistId != "new" && playlistId != "lidarr")
+                if (playlistId != null && playlistId != "new" && playlistId != "lidarr" && playlistId != "lidarrnew")
                 {
                     var spotifyPlaylist = await _spotify!.Playlists.Get(playlistId);
                     _logger?.LogInformation("Working on Spotifyplaylist: " + spotifyPlaylist.Name);
@@ -161,7 +161,7 @@ namespace SpotifyPlexSync
                         {
                             _logger?.LogInformation("Working on Spotifyplaylist: " + playList.Name);
 
-                            reports.Add(await CreateOrUpdatePlexPlayList(playList, playlistId == "new"));
+                            reports.Add(await CreateOrUpdatePlexPlayList(playList, (playlistId == "new" || playlistId == "lidarrnew")));
 
                             // refresh client
                             var spotifyConfig = SpotifyClientConfig.CreateDefault();
