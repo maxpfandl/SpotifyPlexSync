@@ -60,14 +60,14 @@ Syncs only the new playlists from the config, which are not yet existing in Plex
 
 `SpotifyPlexSync lidarr`
 
-Connects to lidarr and syncs all playlists in the Importlist calles "Spotify Playlists"
+Connects to lidarr and syncs all playlists in the Importlist calles "Spotify Playlists".
 Needs Lidarr configured in appsettings
 
 ### Imported new Lidarr playlists
 
 `SpotifyPlexSync lidarrnew`
 
-Connects to lidarr and syncs all playlists in the Importlist calles "Spotify Playlists" which are not yet existing in Plex
+Connects to lidarr and syncs all playlists in the Importlist calles "Spotify Playlists" which are not yet existing in Plex.
 Needs Lidarr configured in appsettings
 
 ### Full sync* 
