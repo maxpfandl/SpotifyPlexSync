@@ -64,7 +64,7 @@ Connects to lidarr and syncs all playlists in the Importlist calles "Spotify Pla
 
 ### Imported new Lidarr playlists
 
-`SpotifyPlexSync lidarrnew]`
+`SpotifyPlexSync lidarrnew`
 
 Connects to lidarr and syncs all playlists in the Importlist calles "Spotify Playlists" which are not yet existing in Plex
 
