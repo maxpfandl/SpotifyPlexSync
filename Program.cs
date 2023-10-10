@@ -445,7 +445,7 @@ namespace SpotifyPlexSync
             using (HttpClient client = new HttpClient())
             {
 
-                await playList.Initialize(spotifyPl, client, _spotify!, newOnly);
+                await playList.Initialize(spotifyPl, client, _spotify!, newOnly, checkSnapshot);
 
                 report = playList.GetReport();
 
@@ -456,10 +456,7 @@ namespace SpotifyPlexSync
                 if (playList.HasFoundTracks)
                 {
 
-                    if(checkSnapshot && CheckIfSnapshotAlreadySynced(playList.VersionIdentifier)){
-                        _logger?.LogInformation("No change to SpotifyPlaylist: " + playList.Name);
-                        return report;
-                    }
+
 
                     playList.PlexId = await GetPlaylist(playList.Name!, client);
 
@@ -574,16 +571,7 @@ namespace SpotifyPlexSync
 
         }
 
-        private static bool CheckIfSnapshotAlreadySynced(string? versionIdentifier)
-        {
-            var file = "syncedversions.log";
-            var synced = File.ReadAllLines(file);
-            if(synced.Contains(versionIdentifier))
-                return true;
-            
-            File.AppendAllLines(file, new List<string>(){versionIdentifier!});
-            return false;
-        }
+
 
         private static async Task<string?> CreatePlayListPlex(string name, HttpClient client)
         {

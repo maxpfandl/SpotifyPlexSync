@@ -59,11 +59,16 @@ namespace SpotifyPlexSync
             }
         }
 
-        public async Task Initialize(FullPlaylist spPlaylist, HttpClient client, SpotifyClient spotify, bool newOnly = false)
+        public async Task Initialize(FullPlaylist spPlaylist, HttpClient client, SpotifyClient spotify, bool newOnly = false, bool checkSnapshot = true)
         {
             Name = _config?["Prefix"] + spPlaylist.Name;
             Author = spPlaylist.Owner?.DisplayName;
-            VersionIdentifier = spPlaylist.Id+"|"+spPlaylist.SnapshotId;
+            VersionIdentifier = spPlaylist.Id + "|" + spPlaylist.SnapshotId;
+            if (checkSnapshot && CheckIfSnapshotAlreadySynced(VersionIdentifier))
+            {
+                _logger?.LogInformation("No change to SpotifyPlaylist: " + Name);
+                return ;
+            }
             if (_config.GetValue<bool>("AddAuthorToTitle") && !string.IsNullOrEmpty(Author))
             {
                 Name = Name + " by " + Author;
@@ -173,7 +178,16 @@ namespace SpotifyPlexSync
 
         }
 
-
+        private static bool CheckIfSnapshotAlreadySynced(string? versionIdentifier)
+        {
+            var file = "syncedversions.log";
+            var synced = File.ReadAllLines(file);
+            if(synced.Contains(versionIdentifier))
+                return true;
+            
+            File.AppendAllLines(file, new List<string>(){versionIdentifier!});
+            return false;
+        }
         public string GetReport()
         {
 
