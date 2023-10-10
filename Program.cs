@@ -119,7 +119,9 @@ namespace SpotifyPlexSync
                 {
                     var spotifyPlaylist = await _spotify!.Playlists.Get(playlistId);
                     _logger?.LogInformation("Working on Spotifyplaylist: " + spotifyPlaylist.Name);
-                    reports.Add(await CreateOrUpdatePlexPlayList(spotifyPlaylist, checkSnapshot:bool.Parse(_config!["CheckSpotifySnapshot"])));
+                    var report = await CreateOrUpdatePlexPlayList(spotifyPlaylist, checkSnapshot: bool.Parse(_config!["CheckSpotifySnapshot"]));
+                    if (!String.IsNullOrEmpty(report))
+                        reports.Add(report);
                 }
                 else
                 {
@@ -160,8 +162,9 @@ namespace SpotifyPlexSync
                         try
                         {
                             _logger?.LogInformation("Working on Spotifyplaylist: " + playList.Name);
-
-                            reports.Add(await CreateOrUpdatePlexPlayList(playList, (playlistId == "new" || playlistId == "lidarrnew"), checkSnapshot:bool.Parse(_config!["CheckSpotifySnapshot"])));
+                            var report = await CreateOrUpdatePlexPlayList(playList, (playlistId == "new" || playlistId == "lidarrnew"), checkSnapshot: bool.Parse(_config!["CheckSpotifySnapshot"]));
+                            if (!String.IsNullOrEmpty(report))
+                                reports.Add(report);
 
                             // refresh client
                             var spotifyConfig = SpotifyClientConfig.CreateDefault();
@@ -313,11 +316,13 @@ namespace SpotifyPlexSync
 
                             foreach (var playlist in fullPlayLists)
                             {
-                                
+
                                 try
                                 {
                                     _logger?.LogInformation("Working on Spotifyplaylist: " + playlist.Name);
-                                    reports.Add(await CreateOrUpdatePlexPlayList(playlist));
+                                    var report = await CreateOrUpdatePlexPlayList(playlist);
+                                    if (!String.IsNullOrEmpty(report))
+                                        reports.Add(report);
                                 }
                                 catch (Exception ex)
                                 {
@@ -346,7 +351,7 @@ namespace SpotifyPlexSync
                                     var fplst = await _spotify.Playlists.Get(playlist.Id);
                                     if (fplst != null && fplst.Tracks!.Items!.Count > 0)
                                     {
-                                        
+
                                         if (_config.GetValue<bool>("AddAuthorToTitle") && !string.IsNullOrEmpty(playlist.Owner.DisplayName))
                                         {
                                             playlistsJson.Add($"{playlist.Id}|{playlist.Name} by {playlist.Owner.DisplayName}");

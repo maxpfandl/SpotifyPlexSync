@@ -201,7 +201,8 @@ namespace SpotifyPlexSync
         {
             if (NoUpdate)
             {
-                return $"{Name} | no update neccesairy (either switch new or snapshot not updated)";
+                return "";
+                // return $"{Name} | no update neccesairy (either switch new or snapshot not updated)";
             }
             int found = 0;
             Tracks.ForEach(p =>
