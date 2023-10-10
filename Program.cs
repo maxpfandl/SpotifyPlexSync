@@ -119,7 +119,7 @@ namespace SpotifyPlexSync
                 {
                     var spotifyPlaylist = await _spotify!.Playlists.Get(playlistId);
                     _logger?.LogInformation("Working on Spotifyplaylist: " + spotifyPlaylist.Name);
-                    reports.Add(await CreateOrUpdatePlexPlayList(spotifyPlaylist));
+                    reports.Add(await CreateOrUpdatePlexPlayList(spotifyPlaylist, checkSnapshot:bool.Parse(_config!["CheckSpotifySnapshot"])));
                 }
                 else
                 {
@@ -161,7 +161,7 @@ namespace SpotifyPlexSync
                         {
                             _logger?.LogInformation("Working on Spotifyplaylist: " + playList.Name);
 
-                            reports.Add(await CreateOrUpdatePlexPlayList(playList, (playlistId == "new" || playlistId == "lidarrnew")));
+                            reports.Add(await CreateOrUpdatePlexPlayList(playList, (playlistId == "new" || playlistId == "lidarrnew"), checkSnapshot:bool.Parse(_config!["CheckSpotifySnapshot"])));
 
                             // refresh client
                             var spotifyConfig = SpotifyClientConfig.CreateDefault();
@@ -436,7 +436,7 @@ namespace SpotifyPlexSync
         }
 
 
-        private static async Task<string> CreateOrUpdatePlexPlayList(FullPlaylist spotifyPl, bool newOnly = false)
+        private static async Task<string> CreateOrUpdatePlexPlayList(FullPlaylist spotifyPl, bool newOnly = false, bool checkSnapshot = true)
         {
             string report = "";
 
@@ -456,7 +456,7 @@ namespace SpotifyPlexSync
                 if (playList.HasFoundTracks)
                 {
 
-                    if(CheckIfSnapshotAlreadySynced(playList.VersionIdentifier)){
+                    if(checkSnapshot && CheckIfSnapshotAlreadySynced(playList.VersionIdentifier)){
                         _logger?.LogInformation("No change to SpotifyPlaylist: " + playList.Name);
                         return report;
                     }
