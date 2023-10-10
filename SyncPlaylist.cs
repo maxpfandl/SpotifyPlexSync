@@ -1,3 +1,4 @@
+using System.Dynamic;
 using System.Text.RegularExpressions;
 using System.Web;
 using System.Xml.Linq;
@@ -32,6 +33,8 @@ namespace SpotifyPlexSync
 
         public string? PosterUrl { get; private set; }
         public string? PlexId { get; set; }
+
+        public bool NoUpdate { get; set; }
         public List<SyncPlaylistTrack> Tracks { get; }
 
         public string? VersionIdentifier { get; set; }
@@ -63,10 +66,12 @@ namespace SpotifyPlexSync
         {
             Name = _config?["Prefix"] + spPlaylist.Name;
             Author = spPlaylist.Owner?.DisplayName;
+            NoUpdate = false;
             VersionIdentifier = spPlaylist.Id + "|" + spPlaylist.SnapshotId;
             if (checkSnapshot && CheckIfSnapshotAlreadySynced(VersionIdentifier))
             {
                 _logger?.LogInformation("No change to SpotifyPlaylist: " + Name);
+                NoUpdate = true;
                 return;
             }
             if (_config.GetValue<bool>("AddAuthorToTitle") && !string.IsNullOrEmpty(Author))
@@ -98,6 +103,7 @@ namespace SpotifyPlexSync
                     if (newOnly)
                     {
                         _logger?.LogWarning($"Playlist {Name} existing but started with switch new only");
+                        NoUpdate = true;
                         return;
 
                     }
@@ -193,7 +199,10 @@ namespace SpotifyPlexSync
         }
         public string GetReport()
         {
-
+            if (NoUpdate)
+            {
+                return $"{Name} | no update neccesairy (either switch new or snapshot not updated)";
+            }
             int found = 0;
             Tracks.ForEach(p =>
             {

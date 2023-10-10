@@ -456,6 +456,7 @@ $RECYCLE.BIN/
 appsettings.my.json
 appsettings.playlists.json
 publish.cmd
+publishSingle.cmd
 build.cmd
 /build/
 notes.txt
