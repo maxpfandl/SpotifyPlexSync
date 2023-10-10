@@ -34,6 +34,8 @@ namespace SpotifyPlexSync
         public string? PlexId { get; set; }
         public List<SyncPlaylistTrack> Tracks { get; }
 
+        public string? VersionIdentifier { get; set; }
+
         public bool HasFoundTracks
         {
             get
@@ -61,6 +63,7 @@ namespace SpotifyPlexSync
         {
             Name = _config?["Prefix"] + spPlaylist.Name;
             Author = spPlaylist.Owner?.DisplayName;
+            VersionIdentifier = spPlaylist.Id+"|"+spPlaylist.SnapshotId;
             if (_config.GetValue<bool>("AddAuthorToTitle") && !string.IsNullOrEmpty(Author))
             {
                 Name = Name + " by " + Author;
@@ -352,7 +355,7 @@ namespace SpotifyPlexSync
 
         public int CompareTo(SyncPlaylistTrack? other)
         {
-            if (other != null && this != null )
+            if (other != null && this != null)
                 return this.SortOrder.CompareTo(other.SortOrder);
             return 0;
         }

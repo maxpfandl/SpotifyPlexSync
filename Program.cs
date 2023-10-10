@@ -313,6 +313,7 @@ namespace SpotifyPlexSync
 
                             foreach (var playlist in fullPlayLists)
                             {
+                                
                                 try
                                 {
                                     _logger?.LogInformation("Working on Spotifyplaylist: " + playlist.Name);
@@ -345,6 +346,7 @@ namespace SpotifyPlexSync
                                     var fplst = await _spotify.Playlists.Get(playlist.Id);
                                     if (fplst != null && fplst.Tracks!.Items!.Count > 0)
                                     {
+                                        
                                         if (_config.GetValue<bool>("AddAuthorToTitle") && !string.IsNullOrEmpty(playlist.Owner.DisplayName))
                                         {
                                             playlistsJson.Add($"{playlist.Id}|{playlist.Name} by {playlist.Owner.DisplayName}");
@@ -454,6 +456,10 @@ namespace SpotifyPlexSync
                 if (playList.HasFoundTracks)
                 {
 
+                    if(CheckIfSnapshotAlreadySynced(playList.VersionIdentifier)){
+                        _logger?.LogInformation("No change to SpotifyPlaylist: " + playList.Name);
+                        return report;
+                    }
 
                     playList.PlexId = await GetPlaylist(playList.Name!, client);
 
@@ -566,6 +572,17 @@ namespace SpotifyPlexSync
                 return report;
             }
 
+        }
+
+        private static bool CheckIfSnapshotAlreadySynced(string? versionIdentifier)
+        {
+            var file = "syncedversions.log";
+            var synced = File.ReadAllLines(file);
+            if(synced.Contains(versionIdentifier))
+                return true;
+            
+            File.AppendAllLines(file, new List<string>(){versionIdentifier!});
+            return false;
         }
 
         private static async Task<string?> CreatePlayListPlex(string name, HttpClient client)
