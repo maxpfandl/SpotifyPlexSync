@@ -215,7 +215,7 @@ namespace SpotifyPlexSync
         private async static Task<List<string>> GetPlaylistsFromLidarr(string? url, string? apiKey)
         {
             var result = new List<string>();
-            var endpoint = url + "api/v1/importlist";
+            var endpoint = url + "/api/v1/importlist";
             var requestMovie = new HttpRequestMessage(HttpMethod.Get, endpoint);
             requestMovie.Headers.Add("X-Api-Key", apiKey);
             using (HttpClient client = new HttpClient())
