@@ -67,7 +67,7 @@ namespace SpotifyPlexSync
             if (checkSnapshot && CheckIfSnapshotAlreadySynced(VersionIdentifier))
             {
                 _logger?.LogInformation("No change to SpotifyPlaylist: " + Name);
-                return ;
+                return;
             }
             if (_config.GetValue<bool>("AddAuthorToTitle") && !string.IsNullOrEmpty(Author))
             {
@@ -181,11 +181,14 @@ namespace SpotifyPlexSync
         private static bool CheckIfSnapshotAlreadySynced(string? versionIdentifier)
         {
             var file = "syncedversions.log";
-            var synced = File.ReadAllLines(file);
-            if(synced.Contains(versionIdentifier))
-                return true;
-            
-            File.AppendAllLines(file, new List<string>(){versionIdentifier!});
+            if (File.Exists(file))
+            {
+                var synced = File.ReadAllLines(file);
+                if (synced.Contains(versionIdentifier))
+                    return true;
+            }
+
+            File.AppendAllLines(file, new List<string>() { versionIdentifier! });
             return false;
         }
         public string GetReport()
