@@ -15,6 +15,8 @@ namespace SpotifyPlexSync
         private static List<SyncPlaylistTrack> _cache = new List<SyncPlaylistTrack>();
         private static List<SyncPlaylistTrack> _nfCache = new List<SyncPlaylistTrack>();
 
+        private static List<string> _snapShots = new List<string>();
+
         private ILogger? _logger;
         private SyncPlaylist()
         {
@@ -184,17 +186,17 @@ namespace SpotifyPlexSync
 
         }
 
-        private static bool CheckIfSnapshotAlreadySynced(string? versionIdentifier)
+        private static bool CheckIfSnapshotAlreadySynced(string versionIdentifier)
         {
             var file = "syncedversions.log";
-            if (File.Exists(file))
+            if (File.Exists(file) && _snapShots.Count == 0)
             {
-                var synced = File.ReadAllLines(file);
-                if (synced.Contains(versionIdentifier))
+                _snapShots = File.ReadAllLines(file).ToList();
+                if (_snapShots.Contains(versionIdentifier))
                     return true;
             }
-
-            File.AppendAllLines(file, new List<string>() { versionIdentifier! });
+            _snapShots.Add(versionIdentifier);
+            File.AppendAllLines(file, new List<string>() { versionIdentifier });
             return false;
         }
         public string GetReport()
