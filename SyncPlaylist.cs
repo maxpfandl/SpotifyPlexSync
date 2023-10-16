@@ -192,9 +192,9 @@ namespace SpotifyPlexSync
             if (File.Exists(file) && _snapShots.Count == 0)
             {
                 _snapShots = File.ReadAllLines(file).ToList();
-                if (_snapShots.Contains(versionIdentifier))
-                    return true;
             }
+            if (_snapShots.Contains(versionIdentifier))
+                return true;
             _snapShots.Add(versionIdentifier);
             File.AppendAllLines(file, new List<string>() { versionIdentifier });
             return false;
