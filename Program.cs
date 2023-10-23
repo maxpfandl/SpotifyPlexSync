@@ -10,6 +10,9 @@ using Newtonsoft.Json;
 using Swan.Parsers;
 using Newtonsoft.Json.Linq;
 using QuickType;
+using Swan.Formatters;
+using System.Text.Json;
+using Newtonsoft.Json.Serialization;
 
 
 namespace SpotifyPlexSync
@@ -230,20 +233,22 @@ namespace SpotifyPlexSync
                 {
                     string payload = await (new StreamReader(resultMovie.Content.ReadAsStream())).ReadToEndAsync();
 
-                    var root = ImportList.FromJson(payload);
+
+
+                    var root = Json.Deserialize<ImportList[]>(payload);
 
 
 
-                    foreach (var list in root)
+                    foreach (var list in root!)
                     {
-                        if (list.Name == "Spotify Playlists")
+                        if (list.name == "Spotify Playlists")
                         {
-                            foreach (var field in list.Fields)
+                            foreach (var field in list.fields)
                             {
-                                if (field.Name == "playlistIds")
+                                if (field.name == "playlistIds")
                                 {
-                                    var ids = field.Value!.Value;
-                                    return ids.StringArray;
+                                    var ids = field.value.ToList();
+                                    return ids;
 
                                 }
                             }
