@@ -6,7 +6,7 @@
 //
 //    var importList = ImportList.FromJson(jsonString);
 
-namespace SpotifyPlexSync
+namespace QuickType
 {
     using System;
     using System.Collections.Generic;
@@ -119,7 +119,7 @@ namespace SpotifyPlexSync
 
     public enum MonitorNewItems { All };
 
-    public enum RootFolderPath { Music };
+    public enum RootFolderPath { Music, RootFolderPathMusic };
 
     public enum ShouldMonitor { EntireArtist };
 
@@ -136,12 +136,12 @@ namespace SpotifyPlexSync
 
     public partial class ImportList
     {
-        public static List<ImportList> FromJson(string json) => JsonConvert.DeserializeObject<List<ImportList>>(json, SpotifyPlexSync.Converter.Settings);
+        public static List<ImportList> FromJson(string json) => JsonConvert.DeserializeObject<List<ImportList>>(json, QuickType.Converter.Settings);
     }
 
     public static class Serialize
     {
-        public static string ToJson(this List<ImportList> self) => JsonConvert.SerializeObject(self, SpotifyPlexSync.Converter.Settings);
+        public static string ToJson(this List<ImportList> self) => JsonConvert.SerializeObject(self, QuickType.Converter.Settings);
     }
 
     internal static class Converter
@@ -541,9 +541,12 @@ namespace SpotifyPlexSync
         {
             if (reader.TokenType == JsonToken.Null) return null;
             var value = serializer.Deserialize<string>(reader);
-            if (value == "/music/")
+            switch (value)
             {
-                return RootFolderPath.Music;
+                case "/music":
+                    return RootFolderPath.RootFolderPathMusic;
+                case "/music/":
+                    return RootFolderPath.Music;
             }
             throw new Exception("Cannot unmarshal type RootFolderPath");
         }
@@ -556,10 +559,14 @@ namespace SpotifyPlexSync
                 return;
             }
             var value = (RootFolderPath)untypedValue;
-            if (value == RootFolderPath.Music)
+            switch (value)
             {
-                serializer.Serialize(writer, "/music/");
-                return;
+                case RootFolderPath.RootFolderPathMusic:
+                    serializer.Serialize(writer, "/music");
+                    return;
+                case RootFolderPath.Music:
+                    serializer.Serialize(writer, "/music/");
+                    return;
             }
             throw new Exception("Cannot marshal type RootFolderPath");
         }

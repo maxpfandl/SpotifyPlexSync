@@ -9,6 +9,8 @@ using System.Text;
 using Newtonsoft.Json;
 using Swan.Parsers;
 using Newtonsoft.Json.Linq;
+using QuickType;
+
 
 namespace SpotifyPlexSync
 {
