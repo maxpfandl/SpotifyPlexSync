@@ -152,7 +152,7 @@ namespace SpotifyPlexSync
                     {
                         try
                         {
-                            Tracks.Add(await SearchSpotifyTracksInPlex(client, item.Item2, existingPlaylist, item.Item1));
+                            Tracks.Add(await SearchSpotifyTracksInPlex(client, item.Item2, existingPlaylist, item.Item1, spPlaylist.Id));
                         }
                         catch (Exception ex)
                         {
@@ -217,7 +217,7 @@ namespace SpotifyPlexSync
 
         }
 
-        private async Task<SyncPlaylistTrack> SearchSpotifyTracksInPlex(HttpClient client, FullTrack spotifyTrack, List<PlexTrack> existingPlaylist, int sortOrder)
+        private async Task<SyncPlaylistTrack> SearchSpotifyTracksInPlex(HttpClient client, FullTrack spotifyTrack, List<PlexTrack> existingPlaylist, int sortOrder, string fileId)
         {
             SyncPlaylistTrack trackresult = new SyncPlaylistTrack();
             trackresult.SpTrack = spotifyTrack;
@@ -326,7 +326,7 @@ namespace SpotifyPlexSync
                     _logger?.LogWarning("Track not found on Plex: " + text);
                     if (_config?.GetValue<bool>("LogUnmatched") ?? false)
                     {
-                        File.AppendAllLines($"sptfplexsync_unmatched_{DateTime.Now.ToString("yyyy-MM-dd")}.log", new List<string>() { text });
+                        File.AppendAllLines($"sptfplexsync_unmatched_{fileId}_{DateTime.Now.ToString("yyyy-MM-dd")}.log", new List<string>() { text });
                     }
                     if (!_nfCache.Contains(trackresult))
                         _nfCache.Add(trackresult);

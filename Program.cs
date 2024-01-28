@@ -109,7 +109,7 @@ namespace SpotifyPlexSync
             try
             {
                 List<string> playlists = new List<string>();
-                if (_args != null && (_args[0] == "lidarr" || _args[0] == "lidarrnew"))
+                if (_args != null && _args.Count() > 0 && (_args[0] == "lidarr" || _args[0] == "lidarrnew"))
                 {
                     playlists = await GetPlaylistsFromLidarr(_config?["Lidarr:Url"], _config?["Lidarr:ApiKey"]);
                 }
